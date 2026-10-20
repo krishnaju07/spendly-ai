@@ -19,16 +19,19 @@ export function DemoBanner() {
     if (!el) return;
     const set = () => root.style.setProperty('--banner-h', `${el.offsetHeight}px`);
     set();
+    // the banner pads itself for the notch, so the top bar below it must not add that inset a second time
+    root.style.setProperty('--safe-top', '0px');
     const ro = new ResizeObserver(set);
     ro.observe(el);
     return () => {
       ro.disconnect();
       root.style.removeProperty('--banner-h');
+      root.style.removeProperty('--safe-top');
     };
   }, [isDemo]);
   if (!isDemo) return null;
   return (
-    <div ref={ref} role="status" className="sticky top-0 z-50 flex items-center justify-center gap-3 bg-[var(--status-warning)] px-4 py-2 text-[13px] font-medium text-[#1f1300]">
+    <div ref={ref} role="status" className="sticky top-0 z-50 flex items-center justify-center gap-3 bg-[var(--status-warning)] px-4 pt-[calc(0.5rem+env(safe-area-inset-top,0px))] pb-2 text-[13px] font-medium text-[#1f1300]">
       <FlaskConical className="size-4 shrink-0" aria-hidden />
       <span>
         <strong>Demo workspace</strong> — sample data, not your real spending.

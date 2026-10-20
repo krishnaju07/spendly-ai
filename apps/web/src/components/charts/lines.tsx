@@ -23,7 +23,7 @@ export function MomLines({ data, currentLabel, previousLabel }: { data: MomPoint
           </linearGradient>
         </defs>
         <CartesianGrid {...gridProps} />
-        <XAxis dataKey="day" {...axisProps} interval="preserveStartEnd" minTickGap={18} />
+        <XAxis dataKey="day" {...axisProps} interval="preserveStartEnd" minTickGap={28} />
         <YAxis {...axisProps} axisLine={false} width={46} tickFormatter={(v: number) => formatCompactINR(v)} tickCount={4} />
         <Tooltip
           cursor={{ stroke: 'var(--chart-axis)', strokeWidth: 1 }}

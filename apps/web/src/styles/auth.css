@@ -124,8 +124,8 @@
 }
 @media (max-width: 1023px) {
   .auth-grid { grid-template-columns: minmax(0, 1fr); }
-  .auth-hero { display: flex; min-height: 0; flex-direction: column; gap: 14px; padding: 22px 20px 4px; }
-  .auth-panel { padding: 14px 14px 36px; }
+  .auth-hero { display: flex; min-height: 0; flex-direction: column; gap: 14px; padding: calc(22px + env(safe-area-inset-top, 0px)) 20px 4px; }
+  .auth-panel { padding: 14px 14px calc(36px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ── headline ────────────────────────────────────────────────────────────────────────────────── */

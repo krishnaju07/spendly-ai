@@ -134,11 +134,15 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
   const [mac] = useState(() => /mac|iphone|ipad/i.test(navigator.userAgent));
 
   return (
-    <div className="sticky top-[var(--banner-h,0px)] z-30 -mx-3 flex items-center gap-2 bg-gradient-to-b from-background via-background/90 to-transparent px-3 pt-3 pb-2 md:static md:mx-0 md:bg-none md:p-0 md:pt-0">
-      <div className="md:hidden">
+    // Solid for most of its height, fading only at the bottom edge: cards scrolling underneath must not show through the icons.
+    // The top padding adds the notch / status-bar inset (an installed iPhone app draws under it); --safe-top is zeroed while the
+    // demo banner is showing, because the banner sits above this bar and already covers that inset.
+    <div className="sticky top-[var(--banner-h,0px)] z-30 -mx-3 flex items-center gap-2 bg-gradient-to-b from-background via-background via-80% to-transparent px-3 pt-[calc(0.75rem+var(--safe-top,0px))] pb-3 md:static md:mx-0 md:bg-none md:p-0 md:pt-0">
+      {/* logo + date chip + three 40px buttons add up to ~368px, more than a 360px phone has: where a date range is shown the logo goes */}
+      <div className={cn('md:hidden', nav?.range && 'max-[479px]:hidden')}>
         <Logo compact />
       </div>
-      {nav?.range && <DateRangePicker className="min-w-0" />}
+      {nav?.range && <DateRangePicker className="min-w-0 shrink" />}
       <div className="flex-1" />
       <Button variant="secondary" className="hidden h-10 w-64 justify-start gap-2 bg-card px-4 font-normal text-muted-foreground shadow-card hover:bg-card/80 lg:inline-flex" onClick={onSearch}>
         <Search className="size-4" />

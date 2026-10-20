@@ -107,13 +107,13 @@ export function DateRangePicker({ className }: { className?: string }) {
               <Label htmlFor="range-from" className="px-1 text-xs">
                 From
               </Label>
-              <Input id="range-from" type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="h-10 px-2 text-sm" />
+              <Input id="range-from" type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="h-10 px-2" />
             </div>
             <div className="space-y-1">
               <Label htmlFor="range-to" className="px-1 text-xs">
                 To
               </Label>
-              <Input id="range-to" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="h-10 px-2 text-sm" />
+              <Input id="range-to" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="h-10 px-2" />
             </div>
           </div>
           <Button type="submit" size="sm" className="w-full" disabled={!from || !to || to < from}>

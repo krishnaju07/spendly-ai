@@ -175,7 +175,7 @@ export default function Budgets() {
                   <Money paise={s.amountPaise} size="lg" />
                 </div>
                 <p className="text-xs text-muted-foreground">{s.basis}</p>
-                <div className="mt-auto flex items-center justify-between gap-2">
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
                   <ConfidenceBadge level={s.confidence} />
                   <Button size="sm" variant="secondary" onClick={() => setEditing({ preset: s })}>Review & create</Button>
                 </div>

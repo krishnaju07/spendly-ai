@@ -18,6 +18,7 @@ import { RingChart, type RingSlice } from '@/components/charts/ring-chart';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCatalog } from '@/hooks/use-catalog';
+import { useIsDesktop } from '@/hooks/use-media-query';
 import { transactionsLink, useFilters } from '@/lib/filters';
 import { api } from '@/lib/api';
 import { inr, inrRound, plural } from '@/lib/format';
@@ -45,6 +46,8 @@ const defaultGrain = (days: number): Grain => (days > 400 ? 'month' : days > 62 
 
 export default function Analytics() {
   const cat = useCatalog();
+  // about how many day labels fit under the plot: eight crowd a phone-width axis into one smear
+  const axisLabels = useIsDesktop() ? 8 : 4;
   const navigate = useNavigate();
   const { rangeParams, apiParams, params, setParams } = useFilters();
   const split = (['category', 'platform'].includes(params.get('by') ?? '') ? params.get('by') : 'none') as Split;
@@ -150,7 +153,7 @@ export default function Analytics() {
                 : { columns: ['Period', 'Net spend', 'Purchases'], rows: (trend.data?.points ?? []).map((p) => [p.label, inrRound(p.netPaise), p.count]) }
             }
           >
-            {stack ? <StackedColumns points={stack.points} series={stack.keys} colors={stack.colors} /> : <ColumnChart data={columns} tickEvery={grain === 'day' && columns.length > 20 ? Math.ceil(columns.length / 8) : undefined} />}
+            {stack ? <StackedColumns points={stack.points} series={stack.keys} colors={stack.colors} /> : <ColumnChart data={columns} tickEvery={grain === 'day' && columns.length > 20 ? Math.ceil(columns.length / axisLabels) : undefined} />}
           </ChartCard>
           {stack && <Legend items={stack.keys.map((k) => ({ key: k.key, label: k.name, color: stack.colors.get(k.key) ?? 'var(--series-other)' }))} className="-mt-2 px-2" />}
 

@@ -276,6 +276,8 @@
     scrollbar-gutter: stable;
     /* a safety net: nothing should ever make a phone page drag sideways (clip, unlike hidden, keeps sticky working) */
     overflow-x: clip;
+    /* the notch / status-bar inset an installed iPhone app draws under (viewport-fit=cover); the demo banner zeroes this */
+    --safe-top: env(safe-area-inset-top, 0px);
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;

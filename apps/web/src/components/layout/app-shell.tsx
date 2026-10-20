@@ -25,7 +25,7 @@ function Inner() {
       </a>
       <DemoBanner />
       <OfflineBanner />
-      <div className="mx-auto flex w-full max-w-[1680px] items-start gap-4 p-3 md:p-4">
+      <div className="mx-auto flex w-full max-w-[1680px] items-start gap-4 p-3 pr-[max(0.75rem,env(safe-area-inset-right))] pl-[max(0.75rem,env(safe-area-inset-left))] md:p-4">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <TopBar onSearch={() => setSearch(true)} />

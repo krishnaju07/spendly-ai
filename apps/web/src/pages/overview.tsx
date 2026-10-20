@@ -157,7 +157,7 @@ export default function Overview() {
               {s && <span className="text-[13px] text-muted-foreground">vs {inrRound(s.previous.netPaise)} {s.baseline.baselineLabel.toLowerCase()}</span>}
             </div>
             {s && s.current.refundsPaise > 0 && <p className="mt-2 text-[13px] text-muted-foreground">Net of {inr(s.current.refundsPaise)} refunded — purchases were {inr(s.current.grossPaise)}.</p>}
-            <div className="mt-6 flex gap-2 max-sm:[&>*]:flex-1 max-sm:[&>*]:px-3 sm:flex-wrap">
+            <div className="mt-6 flex flex-wrap gap-2 max-sm:[&>*]:grow max-sm:[&>*]:px-3">
               <Button onClick={() => openNew()}><Plus /> Add</Button>
               <Button variant="secondary" asChild><Link to="/import"><Upload /> Import</Link></Button>
               <Button variant="secondary" asChild><Link to="/coach"><Sparkles /> Ask coach</Link></Button>

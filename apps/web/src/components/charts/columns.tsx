@@ -48,7 +48,7 @@ export function ColumnChart({
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 8, right: refLine ? 8 : 4, bottom: 0, left: 0 }} barCategoryGap="22%">
         <CartesianGrid {...gridProps} />
-        <XAxis dataKey="label" {...axisProps} interval={tickEvery ? tickEvery - 1 : 'preserveStartEnd'} minTickGap={14} />
+        <XAxis dataKey="label" {...axisProps} interval={tickEvery ? tickEvery - 1 : 'preserveStartEnd'} minTickGap={28} />
         <YAxis {...axisProps} axisLine={false} width={46} tickFormatter={(v: number) => formatCompactINR(v)} tickCount={4} />
         <Tooltip
           cursor={{ fill: 'var(--accent)', opacity: 0.45, radius: 8 }}
@@ -128,7 +128,7 @@ export function StackedColumns({ points, series, colors }: { points: StackPoint[
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={rows} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barCategoryGap="22%">
         <CartesianGrid {...gridProps} />
-        <XAxis dataKey="label" {...axisProps} interval="preserveStartEnd" minTickGap={14} />
+        <XAxis dataKey="label" {...axisProps} interval="preserveStartEnd" minTickGap={28} />
         <YAxis {...axisProps} axisLine={false} width={46} tickFormatter={(v: number) => formatCompactINR(v)} tickCount={4} />
         <Tooltip
           cursor={{ fill: 'var(--accent)', opacity: 0.45, radius: 8 }}
