@@ -81,7 +81,9 @@ async function failure(res: Response): Promise<ApiRequestError> {
   }
   const e = payload.error;
   const err = new ApiRequestError(res.status, e?.code ?? 'ERROR', e?.message ?? `Request failed (${res.status})`, e?.details, e?.requestId);
-  if (res.status === 401) listeners.forEach((fn) => fn());
+  // The start-up session check (`/auth/me`) handles its own 401 ("not signed in"). Notifying listeners for it would clear the
+  // query cache while that very query is still loading, and a production build (no StrictMode re-subscribe) never leaves the splash.
+  if (res.status === 401 && !/\/auth\/me(?:\?|$)/.test(res.url)) listeners.forEach((fn) => fn());
   return err;
 }
 
