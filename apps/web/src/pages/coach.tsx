@@ -148,9 +148,9 @@ export default function Coach() {
               <Input id="coach-q" value={text} onChange={(e) => setText(e.target.value)} maxLength={500} placeholder="Ask about your spending…" className="h-12 rounded-full bg-background/60 px-5 text-base" autoComplete="off" />
               <Button type="submit" size="icon-lg" aria-label="Ask" disabled={ask.isPending || text.trim().length < 2}><SendHorizontal /></Button>
             </form>
-            <ul className="stagger relative mt-4 flex flex-wrap gap-2" aria-label="Suggested questions">
+            <ul className="stagger scrollbar-none relative -mx-5 mt-3 -mb-1 grid snap-x scroll-px-5 auto-cols-max grid-flow-col grid-rows-2 gap-2 overflow-x-auto px-5 py-1 [mask-image:linear-gradient(to_right,#000_calc(100%-1.25rem),transparent)] sm:m-0 sm:mt-4 sm:flex sm:flex-wrap sm:overflow-visible sm:p-0 sm:[mask-image:none]" aria-label="Suggested questions">
               {SUGGESTIONS.map((s) => (
-                <li key={s}><button type="button" onClick={() => send(s)} disabled={ask.isPending} className="rounded-full border bg-background/40 px-3.5 py-1.5 text-left text-[13px] transition-colors outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{s}</button></li>
+                <li key={s} className="shrink-0 snap-start"><button type="button" onClick={() => send(s)} disabled={ask.isPending} className="rounded-full border bg-background/40 px-3.5 py-1.5 text-left text-[13px] whitespace-nowrap transition-colors sm:whitespace-normal outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{s}</button></li>
               ))}
             </ul>
           </section>

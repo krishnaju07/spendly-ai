@@ -1,0 +1,23 @@
+# Render Blueprint: one Node web service (API + built web app). See docs/DEPLOYMENT.md.
+# Needs a MongoDB URI (MongoDB Atlas free tier works). Set MONGODB_URI and APP_ORIGIN in the Render dashboard.
+services:
+  - type: web
+    name: spendly-ai
+    runtime: node
+    plan: free # sleeps when idle; uploaded files are NOT kept (no disk). Use a paid plan + disk for real use.
+    buildCommand: npm ci --include=dev && npm run build # NODE_ENV=production skips devDependencies; the build tools live there
+    startCommand: cd apps/api && node dist/server.js
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY # Render terminates TLS in front of the app
+        value: "1"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: MONGODB_URI # mongodb+srv://… from Atlas
+        sync: false
+      - key: APP_ORIGIN # the PUBLIC address users open (the Cloudflare site if it proxies /api, else this service's own URL), e.g. https://spendly-ai.pages.dev
+        sync: false

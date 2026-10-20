@@ -22,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useSession } from '@/hooks/use-auth';
 import { useCatalog } from '@/hooks/use-catalog';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { api } from '@/lib/api';
 import { useFilters } from '@/lib/filters';
 import { dayHeading, dayKey, formatDate, formatTime, plural } from '@/lib/format';
@@ -155,6 +156,7 @@ export default function Transactions() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [dupes, setDupes] = useState(false);
   const [search, setSearch] = useState(params.get('q') ?? '');
+  const roomy = useMediaQuery('(min-width: 640px)');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const page = Number(params.get('page') ?? 1) || 1;
@@ -231,10 +233,10 @@ export default function Transactions() {
       )}
 
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-0 flex-1 basis-64">
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input value={search} onChange={(e) => onSearch(e.target.value)} placeholder="Search merchant, platform, amount or date" aria-label="Search transactions" className="h-11 rounded-full bg-card pl-11" />
+            <Input value={search} onChange={(e) => onSearch(e.target.value)} placeholder={roomy ? 'Search merchant, platform, amount or date' : 'Search transactions'} aria-label="Search transactions" className="h-11 rounded-full bg-card pl-11" />
           </div>
           <Select value={`${sort}:${order}`} onValueChange={(v) => { const [s, o] = v.split(':'); set({ sort: s!, order: o! }); }}>
             <SelectTrigger className="h-11 w-auto rounded-full bg-card md:hidden" aria-label="Sort by"><SelectValue /></SelectTrigger>
@@ -252,7 +254,7 @@ export default function Transactions() {
             <Button size="xs" variant="secondary" onClick={() => set({ importJob: null })}>Show everything</Button>
           </p>
         )}
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Quick views">
+        <div className="scrollbar-none -mx-3 flex snap-x gap-2 overflow-x-auto scroll-px-3 px-3 py-1 *:shrink-0 *:snap-start md:mx-0 md:flex-wrap md:overflow-visible md:p-0" role="group" aria-label="Quick views">
           {([['needsReview', 'Needs review', CircleHelp], ['duplicates', 'Possible duplicates', Copy], ['recurring', 'Recurring', Repeat]] as const).map(([k, label, Icon]) => (
             <Button key={k} size="sm" variant={flags[k] ? 'default' : 'outline'} aria-pressed={Boolean(flags[k])} onClick={() => toggleFlag(k)} className="h-9"><Icon /> {label}</Button>
           ))}

@@ -157,13 +157,13 @@ export default function Overview() {
               {s && <span className="text-[13px] text-muted-foreground">vs {inrRound(s.previous.netPaise)} {s.baseline.baselineLabel.toLowerCase()}</span>}
             </div>
             {s && s.current.refundsPaise > 0 && <p className="mt-2 text-[13px] text-muted-foreground">Net of {inr(s.current.refundsPaise)} refunded — purchases were {inr(s.current.grossPaise)}.</p>}
-            <div className="mt-6 flex flex-wrap gap-2">
+            <div className="mt-6 flex gap-2 max-sm:[&>*]:flex-1 max-sm:[&>*]:px-3 sm:flex-wrap">
               <Button onClick={() => openNew()}><Plus /> Add</Button>
               <Button variant="secondary" asChild><Link to="/import"><Upload /> Import</Link></Button>
               <Button variant="secondary" asChild><Link to="/coach"><Sparkles /> Ask coach</Link></Button>
             </div>
           </div>
-          <div className="mx-auto w-full max-w-[17.5rem] shrink-0 lg:mx-0">
+          <div className="mx-auto w-full max-w-[14.5rem] shrink-0 sm:max-w-[17.5rem] lg:mx-0">
             {cats.isPending ? (
               <Skeleton className="aspect-square w-full rounded-full" />
             ) : (
@@ -181,7 +181,7 @@ export default function Overview() {
 
       {/* ── metric tiles ───────────────────────────────────────────────────────────────────── */}
       <section aria-label="Key figures" className="col-span-12 xl:col-span-5">
-        <div className="scrollbar-none -mx-3 flex snap-x gap-3 overflow-x-auto px-3 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 *:snap-start *:shrink-0 md:*:shrink">
+        <div className="scrollbar-none -mx-3 flex snap-x scroll-px-3 gap-3 overflow-x-auto px-3 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 *:snap-start *:shrink-0 md:*:shrink">
           {prefs.incomeTracking && (
             <Tile icon={ArrowDownToLine} label="Income" to={link({ type: 'income' })} sub={s ? <Delta value={s.changePct.income} goodWhen="up" /> : null}>
               {s ? <Money paise={s.current.incomePaise} size="lg" animate /> : <Skeleton className="h-7 w-24" />}
@@ -227,22 +227,28 @@ export default function Overview() {
       </div>
 
       {/* ── categories + platforms ─────────────────────────────────────────────────────────── */}
-      <section className="col-span-12 rounded-[32px] border bg-card p-5 shadow-card sm:p-6 lg:col-span-6">
+      <section className="col-span-12 flex flex-col rounded-[32px] border bg-card p-5 shadow-card sm:p-6 lg:col-span-6">
         <SectionTitle action={<Link to="/analytics" className="text-xs font-medium text-muted-foreground hover:text-foreground">Analytics <ArrowRight className="inline size-3" /></Link>}>Categories</SectionTitle>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-1 flex-col">
           {cats.isPending ? <Skeleton className="h-64 w-full rounded-2xl" /> : slices.length === 0 ? <p className="py-10 text-center text-sm text-muted-foreground">No spending in this period.</p> : (
-            <ul className="grid gap-2 sm:grid-cols-2">
+            <ul className="grid flex-1 gap-2 sm:grid-cols-2 sm:auto-rows-fr">
               {slices.map((sl) => {
                 const total = slices.reduce((a, x) => a + x.value, 0);
+                const share = Math.round((sl.value / total) * 100);
                 return (
                   <li key={sl.key}>
-                    <Link to={sl.href ?? '#'} className="flex items-center gap-3 rounded-2xl bg-muted/70 px-3.5 py-3 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
-                      <Dot color={sl.color} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-medium">{sl.label}</span>
-                        <span className="tnum block text-xs text-muted-foreground">{Math.round((sl.value / total) * 100)}%</span>
+                    <Link to={sl.href ?? '#'} className="flex h-full flex-col justify-center gap-2.5 rounded-2xl bg-muted/70 px-3.5 py-3 outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+                      <span className="flex items-center gap-2.5">
+                        <Dot color={sl.color} />
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{sl.label}</span>
+                        <span className="tnum text-sm font-semibold">{sl.display}</span>
                       </span>
-                      <span className="tnum text-sm font-semibold">{sl.display}</span>
+                      <span className="flex items-center gap-2.5">
+                        <span aria-hidden className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/10">
+                          <span className="block h-full rounded-full" style={{ width: `${Math.max(share, 3)}%`, backgroundColor: sl.color }} />
+                        </span>
+                        <span className="tnum w-8 text-right text-xs text-muted-foreground">{share}%</span>
+                      </span>
                     </Link>
                   </li>
                 );
