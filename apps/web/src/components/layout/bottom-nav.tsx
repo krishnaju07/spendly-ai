@@ -22,7 +22,7 @@ export function BottomNav({ onAdd }: { onAdd: () => void }) {
   return (
     <>
       <nav aria-label="Primary" className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex items-center justify-center gap-2.5 px-4 pb-[max(env(safe-area-inset-bottom),12px)] md:hidden">
-        <div ref={pillRef} className="pill-host pointer-events-auto flex items-center gap-1 rounded-full border bg-popover/80 p-1.5 shadow-[0_12px_40px_-8px_rgb(0_0_0/0.55)] backdrop-blur-xl">
+        <div ref={pillRef} className="pill-host pointer-events-auto flex items-center gap-1 rounded-full border bg-popover/95 p-1.5 shadow-[0_12px_40px_-8px_rgb(0_0_0/0.55)] pointer-fine:bg-popover/80 pointer-fine:backdrop-blur-xl">
           {tabs.map((t) => (
             <NavLink
               key={t.to}

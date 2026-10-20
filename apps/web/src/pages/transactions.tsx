@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useSession } from '@/hooks/use-auth';
 import { useCatalog } from '@/hooks/use-catalog';
-import { useMediaQuery } from '@/hooks/use-media-query';
+import { useIsDesktop, useMediaQuery } from '@/hooks/use-media-query';
 import { api } from '@/lib/api';
 import { useFilters } from '@/lib/filters';
 import { dayHeading, dayKey, formatDate, formatTime, plural } from '@/lib/format';
@@ -157,6 +157,7 @@ export default function Transactions() {
   const [dupes, setDupes] = useState(false);
   const [search, setSearch] = useState(params.get('q') ?? '');
   const roomy = useMediaQuery('(min-width: 640px)');
+  const isDesktop = useIsDesktop();
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const page = Number(params.get('page') ?? 1) || 1;
@@ -254,7 +255,7 @@ export default function Transactions() {
             <Button size="xs" variant="secondary" onClick={() => set({ importJob: null })}>Show everything</Button>
           </p>
         )}
-        <div className="scrollbar-none -mx-3 flex snap-x gap-2 overflow-x-auto scroll-px-3 px-3 py-1 *:shrink-0 *:snap-start md:mx-0 md:flex-wrap md:overflow-visible md:p-0" role="group" aria-label="Quick views">
+        <div className="scrollbar-none relative -mx-3 flex snap-x gap-2 overflow-x-auto scroll-px-3 px-3 py-1 *:shrink-0 *:snap-start md:mx-0 md:flex-wrap md:overflow-visible md:p-0" role="group" aria-label="Quick views">
           {([['needsReview', 'Needs review', CircleHelp], ['duplicates', 'Possible duplicates', Copy], ['recurring', 'Recurring', Repeat]] as const).map(([k, label, Icon]) => (
             <Button key={k} size="sm" variant={flags[k] ? 'default' : 'outline'} aria-pressed={Boolean(flags[k])} onClick={() => toggleFlag(k)} className="h-9"><Icon /> {label}</Button>
           ))}
@@ -270,64 +271,65 @@ export default function Transactions() {
         <EmptyState className="rounded-[32px] border bg-card" title="No transactions here" description={q || range.preset ? 'Nothing matches these filters. Try a wider date range or clear a filter.' : 'Add a transaction or import a statement to get started.'} action={{ label: 'Add a transaction', onClick: () => openNew() }} secondary={{ label: 'Import a statement', to: '/import' }} />
       ) : (
         <>
-          {/* desktop table */}
-          <div className={cn('hidden overflow-hidden rounded-[32px] border bg-card shadow-card md:block', data.isFetching && 'opacity-70 transition-opacity')}>
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-10 pl-5"><label className="-m-2 grid w-max cursor-pointer place-items-center p-2"><input type="checkbox" aria-label="Select all on this page" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(items.map((t) => t.id)) : new Set())} className="size-4 accent-[var(--series-1)]" /></label></TableHead>
-                  <SortHead label="Merchant" k="merchant" sort={sort} order={order} onSort={onSort} />
-                  <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase lg:table-cell">Category</TableHead>
-                  <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase lg:table-cell">Paid with</TableHead>
-                  <SortHead label="Date" k="date" sort={sort} order={order} onSort={onSort} />
-                  <SortHead label="Amount" k="amount" sort={sort} order={order} onSort={onSort} className="pr-5 text-right [&>button]:ml-auto" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((t) => {
-                  const platform = cat.platform(t.platform);
-                  const category = cat.category(t.category);
-                  return (
-                    <TableRow key={t.id} data-state={selected.has(t.id) ? 'selected' : undefined} className="cursor-pointer" onClick={() => openView(t.id)}>
-                      <TableCell className="pl-5" onClick={(e) => e.stopPropagation()}><label className="-m-2 grid w-max cursor-pointer place-items-center p-2"><input type="checkbox" aria-label={`Select ${t.merchantName}`} checked={selected.has(t.id)} onChange={(e) => toggle(t.id, e.target.checked)} className="size-4 accent-[var(--series-1)]" /></label></TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          {platform ? <PlatformLogo platform={platform} size={38} /> : <CategoryIcon icon={category?.icon} color={seriesVar(category?.slot)} size={38} />}
-                          <div className="min-w-0">
-                            <button type="button" onClick={(e) => { e.stopPropagation(); openView(t.id); }} className="flex items-center gap-1.5 text-left text-sm font-medium outline-none hover:underline focus-visible:underline">
-                              <span className="max-w-[16rem] truncate">{t.merchantName}</span>
-                              {t.classification.needsReview && <><CircleHelp className="size-3.5 text-[var(--status-warning)]" aria-hidden /><span className="sr-only">Needs review</span></>}
-                              {t.duplicateStatus === 'possible' && <><Copy className="size-3.5 text-[var(--status-serious)]" aria-hidden /><span className="sr-only">Possible duplicate</span></>}
-                              {t.recurringPaymentId && <><Repeat className="size-3.5 opacity-50" aria-hidden /><span className="sr-only">Recurring</span></>}
-                            </button>
-                            {t.platformName && t.platformName !== t.merchantName && <p className="truncate text-xs text-muted-foreground">{t.platformName}</p>}
+          {/* only the layout in use is built: a CSS-hidden 100-row table is still 100 rows of DOM (and logos) on a phone */}
+          {isDesktop ? (
+            <div className={cn('overflow-hidden rounded-[32px] border bg-card shadow-card', data.isFetching && 'opacity-70 transition-opacity')}>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-10 pl-5"><label className="-m-2 grid w-max cursor-pointer place-items-center p-2"><input type="checkbox" aria-label="Select all on this page" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(items.map((t) => t.id)) : new Set())} className="size-4 accent-[var(--series-1)]" /></label></TableHead>
+                    <SortHead label="Merchant" k="merchant" sort={sort} order={order} onSort={onSort} />
+                    <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase lg:table-cell">Category</TableHead>
+                    <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase lg:table-cell">Paid with</TableHead>
+                    <SortHead label="Date" k="date" sort={sort} order={order} onSort={onSort} />
+                    <SortHead label="Amount" k="amount" sort={sort} order={order} onSort={onSort} className="pr-5 text-right [&>button]:ml-auto" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((t) => {
+                    const platform = cat.platform(t.platform);
+                    const category = cat.category(t.category);
+                    return (
+                      <TableRow key={t.id} data-state={selected.has(t.id) ? 'selected' : undefined} className="cursor-pointer" onClick={() => openView(t.id)}>
+                        <TableCell className="pl-5" onClick={(e) => e.stopPropagation()}><label className="-m-2 grid w-max cursor-pointer place-items-center p-2"><input type="checkbox" aria-label={`Select ${t.merchantName}`} checked={selected.has(t.id)} onChange={(e) => toggle(t.id, e.target.checked)} className="size-4 accent-[var(--series-1)]" /></label></TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {platform ? <PlatformLogo platform={platform} size={38} /> : <CategoryIcon icon={category?.icon} color={seriesVar(category?.slot)} size={38} />}
+                            <div className="min-w-0">
+                              <button type="button" onClick={(e) => { e.stopPropagation(); openView(t.id); }} className="flex items-center gap-1.5 text-left text-sm font-medium outline-none hover:underline focus-visible:underline">
+                                <span className="max-w-[16rem] truncate">{t.merchantName}</span>
+                                {t.classification.needsReview && <><CircleHelp className="size-3.5 text-[var(--status-warning)]" aria-hidden /><span className="sr-only">Needs review</span></>}
+                                {t.duplicateStatus === 'possible' && <><Copy className="size-3.5 text-[var(--status-serious)]" aria-hidden /><span className="sr-only">Possible duplicate</span></>}
+                                {t.recurringPaymentId && <><Repeat className="size-3.5 opacity-50" aria-hidden /><span className="sr-only">Recurring</span></>}
+                              </button>
+                              {t.platformName && t.platformName !== t.merchantName && <p className="truncate text-xs text-muted-foreground">{t.platformName}</p>}
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden text-sm lg:table-cell">{t.categoryName ?? <span className="text-muted-foreground">Uncategorized</span>}</TableCell>
-                      <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">{PAYMENT_METHOD_LABELS[t.paymentMethod]}</TableCell>
-                      <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
-                        {formatDate(t.date, tz, 'long')}
-                        {t.status !== 'completed' && <Badge variant="warn" className="ml-2">{t.status}</Badge>}
-                        {t.type === 'transfer' && <Badge className="ml-2">Transfer</Badge>}
-                      </TableCell>
-                      <TableCell className="pr-5 text-right"><TxnAmount t={t} /></TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* mobile list */}
-          <div className={cn('space-y-5 rounded-[32px] border bg-card p-3 shadow-card md:hidden', data.isFetching && 'opacity-70')}>
-            {grouped.map((g) => (
-              <div key={g.day}>
-                <h3 className="mb-1 px-2 text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">{g.heading}</h3>
-                {g.items.map((t) => <TxnRow key={t.id} t={t} tz={tz} onOpen={openView} selected={selected.has(t.id)} onSelect={(c) => toggle(t.id, c)} />)}
-              </div>
-            ))}
-          </div>
+                        </TableCell>
+                        <TableCell className="hidden text-sm lg:table-cell">{t.categoryName ?? <span className="text-muted-foreground">Uncategorized</span>}</TableCell>
+                        <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">{PAYMENT_METHOD_LABELS[t.paymentMethod]}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
+                          {formatDate(t.date, tz, 'long')}
+                          {t.status !== 'completed' && <Badge variant="warn" className="ml-2">{t.status}</Badge>}
+                          {t.type === 'transfer' && <Badge className="ml-2">Transfer</Badge>}
+                        </TableCell>
+                        <TableCell className="pr-5 text-right"><TxnAmount t={t} /></TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className={cn('space-y-5 rounded-[32px] border bg-card p-3 shadow-card', data.isFetching && 'opacity-70')}>
+              {grouped.map((g) => (
+                <div key={g.day}>
+                  <h3 className="mb-1 px-2 text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">{g.heading}</h3>
+                  {g.items.map((t) => <TxnRow key={t.id} t={t} tz={tz} onOpen={openView} selected={selected.has(t.id)} onSelect={(c) => toggle(t.id, c)} />)}
+                </div>
+              ))}
+            </div>
+          )}
 
           {meta && (
             <nav aria-label="Pagination" className="flex flex-wrap items-center justify-between gap-3">

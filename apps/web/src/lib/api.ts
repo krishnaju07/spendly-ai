@@ -53,7 +53,18 @@ interface Options {
   body?: unknown;
   form?: FormData;
   signal?: AbortSignal;
+  /** Overrides how long to wait for the response to start. */
+  timeoutMs?: number;
 }
+
+/**
+ * How long the server gets to start answering. Without a limit a stalled mobile connection leaves a screen on its
+ * skeleton, or the app on its splash, forever. Reads are quick; writes (a large import confirm) and file generation
+ * (PDF reports) can legitimately take longer, and uploads have to send the whole file first.
+ */
+const READ_TIMEOUT_MS = 20_000;
+const WRITE_TIMEOUT_MS = 60_000;
+const UPLOAD_TIMEOUT_MS = 120_000;
 
 async function send(method: string, path: string, opts: Options = {}): Promise<Response> {
   const headers: Record<string, string> = { Accept: 'application/json', 'X-Spendly-Client': 'web' };
@@ -64,11 +75,25 @@ async function send(method: string, path: string, opts: Options = {}): Promise<R
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(opts.body);
   }
+  // one controller joins the caller's own cancellation with the timeout (AbortSignal.any is not in older iOS)
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, opts.timeoutMs ?? (opts.form ? UPLOAD_TIMEOUT_MS : method === 'GET' ? READ_TIMEOUT_MS : WRITE_TIMEOUT_MS));
+  const cancel = () => controller.abort();
+  if (opts.signal?.aborted) cancel();
+  else opts.signal?.addEventListener('abort', cancel, { once: true });
   try {
-    return await fetch(`/api/v1${path}${qs(opts.query)}`, { method, headers, body, credentials: 'same-origin', signal: opts.signal });
+    return await fetch(`/api/v1${path}${qs(opts.query)}`, { method, headers, body, credentials: 'same-origin', signal: controller.signal });
   } catch (error) {
+    if (timedOut) throw new ApiRequestError(0, 'TIMEOUT', 'The server took too long to respond. Check your connection and try again.');
     if ((error as Error).name === 'AbortError') throw error;
     throw new ApiRequestError(0, 'NETWORK', 'You appear to be offline or the server cannot be reached.');
+  } finally {
+    clearTimeout(timer);
+    opts.signal?.removeEventListener('abort', cancel);
   }
 }
 
@@ -102,7 +127,7 @@ export const api = {
   upload: <T>(path: string, form: FormData) => json<T>('POST', path, { form }),
   /** Fetches a file and saves it through the browser (CSV, PDF, JSON exports). */
   async download(path: string, query?: Query, fallbackName = 'download') {
-    const res = await send('GET', path, { query });
+    const res = await send('GET', path, { query, timeoutMs: WRITE_TIMEOUT_MS });
     if (!res.ok) throw await failure(res);
     const name = /filename="?([^";]+)"?/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? fallbackName;
     const url = URL.createObjectURL(await res.blob());

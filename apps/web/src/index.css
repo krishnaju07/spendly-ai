@@ -274,6 +274,8 @@
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     scrollbar-gutter: stable;
+    /* a safety net: nothing should ever make a phone page drag sideways (clip, unlike hidden, keeps sticky working) */
+    overflow-x: clip;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
@@ -284,6 +286,12 @@
       radial-gradient(720px 440px at 104% 2%, var(--canvas-glow-b), transparent 62%);
     background-repeat: no-repeat;
     background-attachment: fixed;
+  }
+  /* a fixed background cannot be composited: phones repaint both gradients on every scroll frame */
+  @media (max-width: 767px), (pointer: coarse) {
+    body {
+      background-attachment: scroll;
+    }
   }
   :focus-visible {
     outline: 2px solid var(--ring);
@@ -512,6 +520,18 @@
   .stagger > :nth-child(11) { --i: 10; }
   .stagger > :nth-child(12) { --i: 11; }
   .stagger > :nth-child(n + 13) { --i: 12; }
+  /* phones: a dozen cards each scaling and fading on its own layer, one after another, is slow to finish and keeps
+     the page blank for most of a second. Use one light fade-up, staggered over the first few cards only. */
+  @media (max-width: 767px), (pointer: coarse) {
+    .stagger > * {
+      animation: page-in 0.35s var(--ease-out) both;
+      animation-delay: calc(min(var(--i, 0), 3) * 40ms);
+    }
+    /* film grain is a blended overlay on every hero card: invisible at this opacity, costly to composite */
+    .grain::before {
+      display: none;
+    }
+  }
   .pop-in {
     animation: pop 0.55s var(--spring-bouncy) both;
     animation-delay: calc(var(--i, 0) * 60ms);

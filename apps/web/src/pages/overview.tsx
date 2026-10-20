@@ -181,7 +181,9 @@ export default function Overview() {
 
       {/* ── metric tiles ───────────────────────────────────────────────────────────────────── */}
       <section aria-label="Key figures" className="col-span-12 xl:col-span-5">
-        <div className="scrollbar-none -mx-3 flex snap-x scroll-px-3 gap-3 overflow-x-auto px-3 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 *:snap-start *:shrink-0 md:*:shrink">
+        {/* `relative` matters: the Delta chips inside hold an absolutely-positioned sr-only span, and without a positioned
+            ancestor the row's overflow cannot clip it, so it stretched the whole page sideways on phones */}
+        <div className="scrollbar-none relative -mx-3 flex snap-x scroll-px-3 gap-3 overflow-x-auto px-3 pb-1 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 *:snap-start *:shrink-0 md:*:shrink">
           {prefs.incomeTracking && (
             <Tile icon={ArrowDownToLine} label="Income" to={link({ type: 'income' })} sub={s ? <Delta value={s.changePct.income} goodWhen="up" /> : null}>
               {s ? <Money paise={s.current.incomePaise} size="lg" animate /> : <Skeleton className="h-7 w-24" />}

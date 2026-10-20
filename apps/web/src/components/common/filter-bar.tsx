@@ -77,7 +77,7 @@ export function FilterBar({ dims = ['category', 'platform', 'paymentMethod', 'ty
   const typeOptions: Opt[] = TRANSACTION_TYPES.map((t) => ({ value: t, label: TRANSACTION_TYPE_LABELS[t] }));
 
   return (
-    <div className={cn('scrollbar-none -mx-3 flex snap-x items-center gap-2 overflow-x-auto scroll-px-3 px-3 py-1 *:shrink-0 *:snap-start md:mx-0 md:flex-wrap md:overflow-visible md:p-0', className)} role="group" aria-label="Filters">
+    <div className={cn('scrollbar-none relative -mx-3 flex snap-x items-center gap-2 overflow-x-auto scroll-px-3 px-3 py-1 *:shrink-0 *:snap-start md:mx-0 md:flex-wrap md:overflow-visible md:p-0', className)} role="group" aria-label="Filters">
       <span className="mr-1 hidden items-center gap-1.5 text-xs font-medium text-muted-foreground sm:inline-flex">
         <ListFilter className="size-3.5" /> Filter
       </span>

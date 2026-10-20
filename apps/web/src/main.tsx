@@ -16,8 +16,9 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       refetchOnWindowFocus: false,
-      // client errors will not fix themselves; transient ones get a couple of tries
-      retry: (count, error) => !(error instanceof ApiRequestError && error.status >= 400 && error.status < 500) && count < 2,
+      // client errors will not fix themselves; transient ones get a couple of tries. A timeout is not retried quietly:
+      // three 20-second waits behind a skeleton looks like a frozen app, so say so and offer "Try again".
+      retry: (count, error) => !(error instanceof ApiRequestError && ((error.status >= 400 && error.status < 500) || error.code === 'TIMEOUT')) && count < 2,
     },
   },
 });

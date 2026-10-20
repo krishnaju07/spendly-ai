@@ -524,6 +524,18 @@
   .stage-wrap { height: 230px; }
 }
 
+/* Phones and touch screens: keep the scene, drop what repaints every frame. A backdrop blur over a background that
+   never stops moving is re-blurred 60 times a second, the travelling border redraws a masked gradient each frame,
+   and SVG rotations run on the main thread. The scene stays; it just holds still where it is expensive. */
+@media (max-width: 1023px), (pointer: coarse) {
+  .kicker, .auth-card, .feed-card, .coach-bubble { backdrop-filter: none; }
+  .auth-card { background: color-mix(in oklab, var(--card) 90%, transparent); }
+  .auth-card::before, .aurora-dots, .aurora-blob.a, .aurora-blob.b, .aurora-blob.c, .spin-slow, .spin-rev, .spin-orbit { animation: none; }
+  .aurora-blob { will-change: auto; }
+  /* a 12px blur on each word of the headline as it arrives is the heaviest part of the first second */
+  .hero-title .w { animation-name: rise; animation-duration: 0.6s; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .step, .otp-digit, .otp-caret, .otp[data-state='ok'] .otp-cell, .note, .dev-code { animation: none !important; }
   .aurora-blob, .aurora-dots, .spin-slow, .spin-rev, .spin-orbit, .orbit-layer, .orbit-counter, .orbit-float, .marquee-track, .stage-glow, .auth-card::before, .kicker-dot::after { animation: none !important; }

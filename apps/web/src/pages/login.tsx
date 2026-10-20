@@ -44,7 +44,10 @@ export default function Login() {
     await wait(650);
     setExit(true);
     await wait(620);
-    navigate(from, { replace: true, viewTransition: true });
+    // a view transition snapshots the whole screen and freezes it until the next page has rendered: lovely on a laptop,
+    // but on a phone that is a visible stall while the overview's charts mount
+    const light = matchMedia('(max-width: 1023px), (pointer: coarse)').matches;
+    navigate(from, { replace: true, viewTransition: !light });
   };
 
   // `busy` is raised before the session exists, so being signed in does not redirect away mid-animation

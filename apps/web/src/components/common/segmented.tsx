@@ -39,7 +39,8 @@ export function Segmented<T extends string>({
             onClick={() => onChange(o.value)}
             className={cn(
               'rounded-full font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              size === 'sm' ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-[13px]',
+              // touch screens get a taller target (24px is well under a fingertip); mouse users keep the compact pill
+              size === 'sm' ? 'px-3 py-1 text-xs pointer-coarse:py-2' : 'px-4 py-1.5 text-[13px] pointer-coarse:py-2',
               fill && 'flex-1 text-center',
               active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
             )}
