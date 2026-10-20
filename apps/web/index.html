@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en-IN" class="dark" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Spendly AI — every rupee tracked</title>
+    <meta name="description" content="Every rupee tracked. Every decision smarter. A private spending tracker with an evidence-backed AI money coach." />
+    <meta name="theme-color" content="#08090B" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#BFF6FA" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Spendly" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- the default typeface starts downloading with the page instead of after the first render -->
+    <link rel="preload" href="/src/assets/fonts/plus-jakarta-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- external (not inline) so the strict Content-Security-Policy `script-src 'self'` allows it -->
+    <script src="/theme-init.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Spendly AI needs JavaScript to run.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
