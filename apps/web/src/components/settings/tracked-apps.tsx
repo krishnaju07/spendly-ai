@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AppWindow, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { TrackList } from '@/components/auth/track-list';
+import { ProviderLinks } from '@/components/settings/provider-links';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -52,6 +53,8 @@ export function TrackedAppsSettings() {
           {changed && <Button variant="ghost" onClick={() => setDraft(saved)} disabled={saving}>Discard</Button>}
         </div>
       </Card>
+
+      <ProviderLinks />
     </div>
   );
 }

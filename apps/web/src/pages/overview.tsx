@@ -141,7 +141,7 @@ export default function Overview() {
           </>
         }
         action={{ label: 'Add a transaction', onClick: () => openNew() }}
-        secondary={prefs.tracking.platforms.length ? undefined : { label: 'Choose apps to track', to: '/settings?tab=tracking' }}
+        secondary={{ label: prefs.tracking.platforms.length ? 'Link your accounts' : 'Choose apps to track', to: '/settings?tab=tracking' }}
       />
     );
   }

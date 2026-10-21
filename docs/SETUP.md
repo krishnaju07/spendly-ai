@@ -52,6 +52,16 @@ Open the app in Chrome, Edge or Safari. Chrome and Edge show an install icon in 
 
 Spendly never asks for bank, UPI or shopping-app credentials, PINs or OTPs. The only code it ever handles is its own sign-in code, texted to your own number.
 
+## Linking Swiggy
+
+**Settings → Tracked apps → Link your accounts** signs Spendly in to your own Swiggy account through Swiggy's official MCP server, so your Food and Instamart orders arrive without a file.
+
+- You enter your phone number and the OTP **on Swiggy's own page**. Spendly never sees the OTP or a password; it receives a token that can read your order history, kept encrypted (AES-256-GCM, keyed from `SESSION_SECRET`). Spendly only ever calls the read-only history tools, enforced in code.
+- Swiggy shares your latest Food orders (up to 15) and your Instamart orders from the last 15 days, so each sync is stored and history builds up over time.
+- Tick Swiggy in your tracked apps first; Food and Instamart are read only if their own entries are ticked.
+- **Redirect address.** Spendly registers itself with Swiggy for `APP_ORIGIN` + `/api/v1/integrations/providers/swiggy/callback` (for development, `http://localhost:5173/...`). Swiggy accepts `http://localhost` for development without approval; a hosted Spendly on a public https address has to apply through [Swiggy Builders Club](https://mcp.swiggy.com/builders/access/) first. Swiggy's own terms say data may only serve the user's immediate task and that analytics needs separate consent, so ask builders@swiggy.in whether personal spend tracking is allowed before offering this to other people.
+- **Zomato** has an official MCP server but is not allowing third-party apps on it, so its link is shown as unavailable until Zomato opens access.
+
 ## Troubleshooting
 
 | Problem | Fix |

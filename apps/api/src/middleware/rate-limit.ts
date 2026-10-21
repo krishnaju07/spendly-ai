@@ -35,3 +35,5 @@ export const demoLimiter = make(60 * 60_000, 12);
 export const aiLimiter = make(60_000, 20, true);
 export const uploadLimiter = make(60 * 60_000, 40, true);
 export const exportLimiter = make(60 * 60_000, 30, true);
+/** Starting a sign-in with a linked service, and syncing from it: both call out to someone else's servers. */
+export const providerLimiter = make(10 * 60_000, 30, true);

@@ -185,6 +185,8 @@ function assertSlugs(lk: Lookups, platform: string | null | undefined, category:
 export async function createTransaction(
   auth: AuthContext,
   input: CreateInput,
+  /** Where the record came from, when it did not come from someone typing it in. */
+  opts: { importSource?: ImportSource } = {},
 ): Promise<{ doc: TransactionDoc; warnings: string[] }> {
   const classifier = await createClassifier(auth);
   const lk = classifier.lookups;
@@ -240,7 +242,7 @@ export async function createTransaction(
     tags: input.tags,
     externalRef: input.externalRef ?? null,
     refundOfId,
-    importSource: 'manual',
+    importSource: opts.importSource ?? 'manual',
     classification: explicit
       ? { source: 'user', confidence: 1, reason: 'Set by you', needsReview: false, ruleId: null }
       : { ...classificationFrom(rec), needsReview: rec.needsReview || (!category && input.type === 'expense') },

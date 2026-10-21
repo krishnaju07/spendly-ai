@@ -109,11 +109,12 @@ class AnthropicProvider implements LlmProvider {
 class OpenAiCompatibleProvider implements LlmProvider {
   readonly id = 'openai' as const;
   readonly model: string;
-  readonly supportsVision = true;
+  readonly supportsVision: boolean;
   private readonly baseUrl: string;
 
   constructor() {
     this.model = env.AI_MODEL ?? 'gpt-4o-mini';
+    this.supportsVision = env.AI_VISION !== 'false';
     this.baseUrl = (env.AI_BASE_URL ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
   }
 
@@ -140,6 +141,7 @@ class OpenAiCompatibleProvider implements LlmProvider {
         ]
       : req.user;
     const base = {
+      ...env.aiExtraBody,
       model: this.model,
       messages: [
         { role: 'system', content: req.system },
@@ -165,7 +167,7 @@ class OpenAiCompatibleProvider implements LlmProvider {
       };
       const choice = json.choices?.[0];
       if (choice?.finish_reason === 'length') throw new AiProviderError('truncated', 'The model ran out of output tokens');
-      const text = choice?.message?.content?.trim();
+      const text = stripThinking(choice?.message?.content ?? '');
       if (!text) throw new AiProviderError('empty', 'The model returned no text');
       return {
         text,
@@ -178,6 +180,11 @@ class OpenAiCompatibleProvider implements LlmProvider {
       throw new AiProviderError('unavailable', 'The AI provider is unavailable');
     }
   }
+}
+
+/** Reasoning models (several on NVIDIA's free endpoint) can put their working inside <think> tags; only the answer is wanted. */
+export function stripThinking(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*?<\/think>/i, '').trim();
 }
 
 let cached: LlmProvider | null | undefined;

@@ -30,9 +30,12 @@ Read once at start-up and validated; an invalid value stops the server with a cl
 | `AI_PROVIDER` | `none` | `none`, `anthropic` (official SDK) or `openai` (any OpenAI-compatible API). |
 | `AI_MODEL` | provider default | Model name. Defaults: Anthropic `claude-opus-5-5`; OpenAI-compatible `gpt-4o-mini`. |
 | `AI_API_KEY` | — | Required when `AI_PROVIDER` is not `none`. Never hard-coded anywhere. |
-| `AI_BASE_URL` | provider default | Base URL for OpenAI-compatible vendors or local models. |
+| `AI_BASE_URL` | provider default | Base URL for OpenAI-compatible vendors or local models. NVIDIA's free hosted models: `https://integrate.api.nvidia.com/v1` (see the NVIDIA block in `.env.example`). |
+| `AI_EXTRA_BODY` | — | A JSON object of extra fields to send on each chat request, for vendor options (NVIDIA: `{"chat_template_kwargs":{"enable_thinking":false}}` turns off the model's thinking). It cannot set `model`, `messages`, token limits, `stream` or tools. |
+| `AI_VISION` | `true` | Set `false` for an endpoint that cannot read images (most hosted open models, including NVIDIA's text models), so receipt photos are never sent to it. |
 | `AI_TIMEOUT_MS` | `30000` | Per-request timeout (1000–120000). |
 | `AI_MAX_OUTPUT_TOKENS` | `4000` | Output budget (512–16000); thinking tokens share it on current Claude models. |
+| `SWIGGY_MCP_URL` | `https://mcp.swiggy.com` | Where Swiggy's official MCP server lives. Only changed to point at a test double. See *Linking Swiggy* in [SETUP.md](SETUP.md). |
 | `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` | — | Reserved. A Gmail connector is **not implemented**; setting these only changes the status shown on the Import screen. |
 
 ## Rate limits (per IP unless noted)

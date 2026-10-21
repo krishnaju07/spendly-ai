@@ -49,6 +49,10 @@ const schema = z.object({
   AI_MODEL: z.string().optional(),
   AI_API_KEY: z.string().optional(),
   AI_BASE_URL: z.string().optional(),
+  // an OpenAI-compatible endpoint that cannot read images (most hosted open models) says so here, so receipt photos are not sent to it
+  AI_VISION: z.enum(['true', 'false']).optional(),
+  // extra fields some vendors take on a chat request (NVIDIA: {"chat_template_kwargs":{"enable_thinking":false}}); a JSON object
+  AI_EXTRA_BODY: z.string().optional(),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
   // thinking tokens share this budget on current Claude models, so keep it roomy even for short answers
   AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(512).max(16000).default(4000),
@@ -78,6 +82,21 @@ if (!parsed.success) {
 }
 const raw = parsed.data;
 const isProd = raw.NODE_ENV === 'production';
+
+/** AI_EXTRA_BODY as an object. It can add vendor options, never replace what Spendly itself sends. */
+function parseExtraBody(value: string | undefined): Record<string, unknown> {
+  if (!value) return {};
+  let body: unknown;
+  try {
+    body = JSON.parse(value);
+  } catch {
+    throw new Error('AI_EXTRA_BODY must be a JSON object, e.g. {"chat_template_kwargs":{"enable_thinking":false}}.');
+  }
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) throw new Error('AI_EXTRA_BODY must be a JSON object.');
+  const reserved = ['model', 'messages', 'max_tokens', 'max_completion_tokens', 'stream', 'tools', 'tool_choice'].filter((k) => k in body);
+  if (reserved.length) throw new Error(`AI_EXTRA_BODY cannot set ${reserved.join(', ')}: Spendly controls those.`);
+  return body as Record<string, unknown>;
+}
 
 if (isProd && (!raw.SESSION_SECRET || raw.SESSION_SECRET.length < 32)) {
   throw new Error('SESSION_SECRET must be set to a random string of at least 32 characters in production.');
@@ -114,6 +133,7 @@ function findWebDist(): string {
 export const env = {
   ...raw,
   SMS_PROVIDER: smsProvider,
+  aiExtraBody: parseExtraBody(raw.AI_EXTRA_BODY),
   isProd,
   isTest: raw.NODE_ENV === 'test',
   // a fixed dev secret keeps dev sessions valid across restarts; production refuses to start without a real one
