@@ -1,0 +1,46 @@
+/* The apps that can be tracked: tap a tile to allow it. Shared by sign-up and Settings, so it carries no auth-page classes.
+   Where the list sits in a short card it scrolls inside it (.track-scroll), so the button below never leaves the screen. */
+.track-scroll {
+  max-height: min(42dvh, 340px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-inline: -6px;
+  padding: 7px 6px 8px;
+  mask-image: linear-gradient(#000 calc(100% - 22px), transparent);
+}
+.track-item {
+  position: relative;
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--input);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--background) 45%, transparent);
+  padding: 8px 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.25s, background-color 0.25s, box-shadow 0.3s, transform 0.35s var(--spring-bouncy);
+}
+.track-item:hover { border-color: color-mix(in oklab, var(--foreground) 28%, transparent); }
+.track-item:active { transform: scale(0.97); }
+.track-item:has(:focus-visible) { box-shadow: 0 0 0 2px var(--ring); }
+.track-item[data-on='true'] { border-color: var(--series-7); background: color-mix(in oklab, var(--series-7) 14%, transparent); }
+/* the tick is a badge on the tile's corner: it costs the name no room, which matters at 150px a tile on a phone */
+.track-tick {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  background: var(--series-7);
+  color: #fff;
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 0.2s, transform 0.4s var(--spring-bouncy);
+}
+.track-item[data-on='true'] .track-tick { opacity: 1; transform: none; }

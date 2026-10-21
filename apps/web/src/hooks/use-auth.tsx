@@ -15,7 +15,7 @@ interface AuthContextValue {
   /** Texts a sign-in code. Does not change who is signed in. */
   requestCode: (phone: string) => Promise<OtpRequestResultDto>;
   /** `needs_name`: the code was right but the number is new — call again with a name. */
-  verifyCode: (input: { phone: string; otp: string; name?: string }) => Promise<{ status: 'needs_name' } | { status: 'signed_in'; isNew: boolean }>;
+  verifyCode: (input: { phone: string; otp: string; name?: string; tracked?: string[] }) => Promise<{ status: 'needs_name' } | { status: 'signed_in'; isNew: boolean }>;
   startDemo: () => Promise<void>;
   logout: () => Promise<void>;
   updatePrefs: (patch: PreferencesUpdate) => Promise<PreferencesDto>;
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const requestCode = useMutation({ mutationFn: (phone: string) => api.post<OtpRequestResultDto>('/auth/otp/request', { phone }) });
   const verifyCode = useMutation({
-    mutationFn: (v: { phone: string; otp: string; name?: string }) => api.post<AuthResultDto>('/auth/otp/verify', v),
+    mutationFn: (v: { phone: string; otp: string; name?: string; tracked?: string[] }) => api.post<AuthResultDto>('/auth/otp/verify', v),
     onSuccess: (r) => {
       if (r.status === 'signed_in') adopt({ user: r.user, preferences: r.preferences, csrfToken: r.csrfToken });
     },

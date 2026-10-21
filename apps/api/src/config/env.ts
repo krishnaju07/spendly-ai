@@ -52,6 +52,8 @@ const schema = z.object({
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
   // thinking tokens share this budget on current Claude models, so keep it roomy even for short answers
   AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(512).max(16000).default(4000),
+  // where Swiggy's MCP server lives; only changed to point at a test double
+  SWIGGY_MCP_URL: z.string().optional(),
   GMAIL_CLIENT_ID: z.string().optional(),
   GMAIL_CLIENT_SECRET: z.string().optional(),
   // sign-in codes: people sign in with a code texted to their mobile number

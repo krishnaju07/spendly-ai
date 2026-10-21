@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ArrowDownToLine, ArrowRight, Copy, Gauge, CircleHelp, Plus, Receipt, Sparkles, Upload } from 'lucide-react';
+import { ArrowDownToLine, ArrowRight, Copy, Gauge, CircleHelp, Plus, Receipt, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import type { CategoryStatDto, DashboardSummaryDto, Paged, TransactionDto, TrendsDto } from '@spendly/shared';
 import { assignSlots } from '@/components/common/category-icon';
@@ -125,9 +125,23 @@ export default function Overview() {
       <EmptyState
         className="mx-auto max-w-xl rounded-[32px] border bg-card"
         title={`Welcome${user.isDemo ? '' : `, ${user.name.split(' ')[0]}`}`}
-        description="Nothing to show yet. Import a bank or card statement to see where your money goes, or add a transaction by hand."
-        action={{ label: 'Import a statement', to: '/import' }}
-        secondary={{ label: 'Add a transaction', onClick: () => openNew() }}
+        description={
+          <>
+            Nothing to show yet. Add a transaction to see what you spend on food and entertainment.
+            {prefs.tracking.platforms.length > 0 && (
+              <span className="mt-4 flex flex-wrap justify-center gap-2">
+                {prefs.tracking.platforms.map((slug) => (
+                  <span key={slug} className="inline-flex items-center gap-1.5 rounded-full bg-muted py-1 pr-3 pl-1 text-xs font-medium text-foreground">
+                    <PlatformLogo platform={cat.platform(slug)} size={20} />
+                    {cat.platformName(slug)}
+                  </span>
+                ))}
+              </span>
+            )}
+          </>
+        }
+        action={{ label: 'Add a transaction', onClick: () => openNew() }}
+        secondary={prefs.tracking.platforms.length ? undefined : { label: 'Choose apps to track', to: '/settings?tab=tracking' }}
       />
     );
   }
@@ -159,7 +173,6 @@ export default function Overview() {
             {s && s.current.refundsPaise > 0 && <p className="mt-2 text-[13px] text-muted-foreground">Net of {inr(s.current.refundsPaise)} refunded — purchases were {inr(s.current.grossPaise)}.</p>}
             <div className="mt-6 flex flex-wrap gap-2 max-sm:[&>*]:grow max-sm:[&>*]:px-3">
               <Button onClick={() => openNew()}><Plus /> Add</Button>
-              <Button variant="secondary" asChild><Link to="/import"><Upload /> Import</Link></Button>
               <Button variant="secondary" asChild><Link to="/coach"><Sparkles /> Ask coach</Link></Button>
             </div>
           </div>
@@ -230,7 +243,7 @@ export default function Overview() {
 
       {/* ── categories + platforms ─────────────────────────────────────────────────────────── */}
       <section className="col-span-12 flex flex-col rounded-[32px] border bg-card p-5 shadow-card sm:p-6 lg:col-span-6">
-        <SectionTitle action={<Link to="/analytics" className="text-xs font-medium text-muted-foreground hover:text-foreground">Analytics <ArrowRight className="inline size-3" /></Link>}>Categories</SectionTitle>
+        <SectionTitle action={<Link to="/analytics" className="hit-area text-xs font-medium text-muted-foreground hover:text-foreground">Analytics <ArrowRight className="inline size-3" /></Link>}>Categories</SectionTitle>
         <div className="mt-4 flex flex-1 flex-col">
           {cats.isPending ? <Skeleton className="h-64 w-full rounded-2xl" /> : slices.length === 0 ? <p className="py-10 text-center text-sm text-muted-foreground">No spending in this period.</p> : (
             <ul className="grid flex-1 gap-2 sm:grid-cols-2 sm:auto-rows-fr">
@@ -261,7 +274,7 @@ export default function Overview() {
       </section>
 
       <section className="col-span-12 rounded-[32px] border bg-card p-5 shadow-card sm:p-6 lg:col-span-6">
-        <SectionTitle action={<Link to="/platforms" className="text-xs font-medium text-muted-foreground hover:text-foreground">All platforms <ArrowRight className="inline size-3" /></Link>}>Platforms</SectionTitle>
+        <SectionTitle action={<Link to="/platforms" className="hit-area text-xs font-medium text-muted-foreground hover:text-foreground">All platforms <ArrowRight className="inline size-3" /></Link>}>Platforms</SectionTitle>
         <ol className="mt-3 space-y-1">
           {summary.isPending && Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-14 w-full rounded-2xl" />)}
           {top.map((p, i) => (

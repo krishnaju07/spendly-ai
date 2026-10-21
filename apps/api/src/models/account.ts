@@ -97,6 +97,7 @@ export interface UserPreferenceDoc {
   ai: { enabled: boolean; shareMerchantNames: boolean; classifyUnknownMerchants: boolean; readReceipts: boolean; consentedAt: Date | null };
   notifications: { budgetAlerts: boolean; upcomingPayments: boolean; importUpdates: boolean; insights: boolean };
   consents: { emailImport: boolean; emailImportAt: Date | null };
+  tracking: { platforms: string[]; consentedAt: Date | null };
   onboardingCompleted: boolean;
 }
 
@@ -127,6 +128,10 @@ const userPreferenceSchema = new Schema<UserPreferenceDoc>(
     consents: {
       emailImport: { type: Boolean, default: false },
       emailImportAt: { type: Date, default: null },
+    },
+    tracking: {
+      platforms: { type: [String], default: [] },
+      consentedAt: { type: Date, default: null },
     },
     onboardingCompleted: { type: Boolean, default: false },
   },
@@ -169,3 +174,72 @@ notificationSchema.index(
 );
 
 export const Notification = model<NotificationDoc>('Notification', notificationSchema);
+
+/**
+ * A linked service account (Swiggy today). The tokens are sealed; only their expiry is readable. Spendly holds a
+ * token the service issued after the person signed in on the service's own page — never their password or OTP.
+ */
+export interface ProviderConnectionDoc {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId;
+  provider: string;
+  clientId: string;
+  tokenEndpoint: string;
+  accessTokenSealed: string;
+  refreshTokenSealed: string | null;
+  accessExpiresAt: Date;
+  connectedAt: Date;
+  lastSyncAt: Date | null;
+  lastSyncAdded: number | null;
+  lastError: string | null;
+}
+
+const providerConnectionSchema = new Schema<ProviderConnectionDoc>(
+  {
+    userId: { type: Schema.Types.ObjectId, required: true },
+    provider: { type: String, required: true, maxlength: 20 },
+    clientId: { type: String, required: true, maxlength: 200 },
+    tokenEndpoint: { type: String, required: true, maxlength: 400 },
+    accessTokenSealed: { type: String, required: true },
+    refreshTokenSealed: { type: String, default: null },
+    accessExpiresAt: { type: Date, required: true },
+    connectedAt: { type: Date, default: () => new Date() },
+    lastSyncAt: { type: Date, default: null },
+    lastSyncAdded: { type: Number, default: null },
+    lastError: { type: String, default: null, maxlength: 200 },
+  },
+  { timestamps: false },
+);
+providerConnectionSchema.index({ userId: 1, provider: 1 }, { unique: true });
+
+export const ProviderConnection = model<ProviderConnectionDoc>('ProviderConnection', providerConnectionSchema);
+
+/** A sign-in that has been started but not finished: the PKCE secret waits here while the person is on the service's page. */
+export interface ProviderFlowDoc {
+  _id: Types.ObjectId;
+  stateHash: string;
+  userId: Types.ObjectId;
+  provider: string;
+  clientId: string;
+  codeVerifierSealed: string;
+  redirectUri: string;
+  tokenEndpoint: string;
+  createdAt: Date;
+}
+
+const providerFlowSchema = new Schema<ProviderFlowDoc>(
+  {
+    stateHash: { type: String, required: true },
+    userId: { type: Schema.Types.ObjectId, required: true },
+    provider: { type: String, required: true, maxlength: 20 },
+    clientId: { type: String, required: true, maxlength: 200 },
+    codeVerifierSealed: { type: String, required: true },
+    redirectUri: { type: String, required: true, maxlength: 400 },
+    tokenEndpoint: { type: String, required: true, maxlength: 400 },
+    createdAt: { type: Date, default: () => new Date(), expires: 600 },
+  },
+  { timestamps: false },
+);
+providerFlowSchema.index({ stateHash: 1 }, { unique: true });
+
+export const ProviderFlow = model<ProviderFlowDoc>('ProviderFlow', providerFlowSchema);

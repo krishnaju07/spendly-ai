@@ -202,7 +202,7 @@ export default function Analytics() {
           <Card aria-label="Platforms">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-[15px] font-semibold tracking-tight">Platforms</h2>
-              <Link to="/platforms" className="inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground">All platforms <ArrowRight className="size-3.5" aria-hidden /></Link>
+              <Link to="/platforms" className="hit-area inline-flex items-center gap-1 text-[13px] text-muted-foreground hover:text-foreground">All platforms <ArrowRight className="size-3.5" aria-hidden /></Link>
             </div>
             {compare.isPending ? <Skeleton className="h-48 rounded-2xl" /> : platforms.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">No platform spending in this view.</p> : (
               <ol className="space-y-1">

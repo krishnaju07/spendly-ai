@@ -52,7 +52,7 @@ const ARCS = [
   { len: 16, start: 69.6, color: 'var(--series-4)' },
   { len: 9, start: 89.2, color: 'var(--series-3)' },
 ];
-const CHIPS = ['zomato', 'swiggy', 'zepto', 'blinkit', 'bookmyshow', 'amazon', 'uber', 'netflix'];
+const CHIPS = ['zomato', 'swiggy', 'zepto', 'blinkit', 'bookmyshow', 'district', 'netflix', 'spotify'];
 const AMOUNTS = ['1,09,462.90', '1,12,806.45', '1,06,129.10', '1,18,377.65'];
 
 /** A decorative scene — a segmented ring, platforms in orbit and a counter that rolls. The figures are samples. */
@@ -140,12 +140,12 @@ interface FeedItem {
 }
 const FEED: FeedItem[] = [
   { slug: 'swiggy', title: 'Swiggy', sub: 'Food delivery', amount: '−₹486' },
-  { slug: 'uber', title: 'Uber', sub: 'Travel', amount: '−₹277' },
+  { slug: 'spotify', title: 'Spotify', sub: 'Music', amount: '−₹119' },
   { slug: 'netflix', title: 'Netflix', sub: 'Subscription', amount: '−₹649' },
   { slug: 'zomato', title: 'Zomato', sub: 'Refund', amount: '+₹329', plus: true },
   { slug: 'zepto', title: 'Zepto', sub: 'Groceries', amount: '−₹346.95' },
   { slug: 'bookmyshow', title: 'BookMyShow', sub: 'Entertainment', amount: '−₹640' },
-  { slug: 'amazon', title: 'Amazon', sub: 'Shopping', amount: '−₹3,499' },
+  { slug: 'district', title: 'District', sub: 'Events', amount: '−₹1,498' },
   { slug: 'blinkit', title: 'Blinkit', sub: 'Groceries', amount: '−₹412' },
 ];
 
@@ -179,13 +179,13 @@ function Feed() {
 
 // ── the ribbon of platforms ────────────────────────────────────────────────────────────────────
 
-const RIBBON = ['zomato', 'swiggy', 'zepto', 'blinkit', 'swiggy-instamart', 'bigbasket', 'bookmyshow', 'district', 'amazon', 'flipkart', 'myntra', 'uber', 'ola', 'rapido', 'irctc', 'netflix', 'spotify'];
+const RIBBON = ['zomato', 'swiggy', 'zepto', 'blinkit', 'swiggy-instamart', 'bigbasket', 'bookmyshow', 'district', 'paytm-insider', 'netflix', 'spotify', 'youtube-premium', 'prime-video', 'jiohotstar'];
 
 export function Ribbon() {
   const items = RIBBON.map(systemPlatform).filter((p): p is PlatformView => p !== null);
   return (
     <div>
-      <p className="marquee-caption">Recognises spending across</p>
+      <p className="marquee-caption">Recognises food and entertainment spending across</p>
       <div className="marquee" aria-hidden>
         <div className="marquee-track">
           {[...items, ...items].map((p, i) => (

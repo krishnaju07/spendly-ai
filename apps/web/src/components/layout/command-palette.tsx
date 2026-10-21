@@ -3,7 +3,7 @@ import { Moon, Plus, Search, Sparkles, Sun, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut } from '@/components/ui/command';
 import { useTheme } from '@/hooks/use-theme';
-import { NAV } from '@/lib/nav';
+import { MAIN_NAV } from '@/lib/nav';
 
 /** The palette's contents mount only while it is open, so the search box always starts empty. */
 function PaletteBody({ onOpenChange, onAdd }: { onOpenChange: (o: boolean) => void; onAdd: () => void }) {
@@ -29,7 +29,7 @@ function PaletteBody({ onOpenChange, onAdd }: { onOpenChange: (o: boolean) => vo
           </CommandGroup>
         )}
         <CommandGroup heading="Go to">
-          {NAV.map((n) => (
+          {MAIN_NAV.map((n) => (
             <CommandItem key={n.to} value={`go ${n.label}`} onSelect={() => go(n.to)}>
               <n.icon /> {n.label}
             </CommandItem>

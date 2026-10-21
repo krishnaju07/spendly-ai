@@ -8,6 +8,8 @@ export interface NavItem {
   end?: boolean;
   /** Pages whose data follows the global date range show the range picker in the top bar. */
   range?: boolean;
+  /** Still a page (it has a title and a route) but not offered in the sidebar, the tab bar or the "Go to" list. */
+  hidden?: boolean;
 }
 
 export const NAV: NavItem[] = [
@@ -19,10 +21,14 @@ export const NAV: NavItem[] = [
   { to: '/budgets', label: 'Budgets', short: 'Budgets', icon: Gauge },
   { to: '/recurring', label: 'Recurring Payments', short: 'Recurring', icon: Repeat },
   { to: '/goals', label: 'Savings Goals', short: 'Goals', icon: PiggyBank },
-  { to: '/import', label: 'Import & Sync', short: 'Import', icon: FileUp },
+  // reached from Settings > Your data, and from the empty states that need it
+  { to: '/import', label: 'Import & Sync', short: 'Import', icon: FileUp, hidden: true },
   { to: '/reports', label: 'Reports', short: 'Reports', icon: FileText, range: true },
   { to: '/settings', label: 'Settings', short: 'Settings', icon: Settings },
 ];
+
+/** What the sidebar, the tab bar and the command palette offer. */
+export const MAIN_NAV = NAV.filter((n) => !n.hidden);
 
 export const BOTTOM_TABS = ['/', '/transactions', '/coach'] as const;
 

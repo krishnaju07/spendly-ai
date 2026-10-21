@@ -85,11 +85,11 @@ export default function Login() {
           <Logo />
           <div className="space-y-5 pt-[clamp(4px,2vh,24px)]">
             <p className="kicker">
-              <span className="kicker-dot" /> Private · self-hostable · no bank passwords
+              <span className="kicker-dot" /> Private · self-hostable · no app passwords
             </p>
             <Headline />
           </div>
-          <p className="hero-copy">Bring your bank, card and UPI spending into one private place — Zomato, Swiggy, Zepto, BookMyShow and everything else — and let a coach that only quotes your own numbers explain it.</p>
+          <p className="hero-copy">Bring your food, grocery and entertainment spending into one private place — Zomato, Swiggy, Zepto, BookMyShow, Netflix and the rest — and let a coach that only quotes your own numbers explain it.</p>
           <div className="relative min-h-0">
             <HeroStage />
           </div>

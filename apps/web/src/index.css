@@ -338,6 +338,17 @@
     letter-spacing: var(--tr-title);
     text-wrap: balance;
   }
+  /* a small link keeps its size and look, but on a touch screen the area that answers a tap grows to about 44px */
+  .hit-area {
+    position: relative;
+  }
+  @media (pointer: coarse) {
+    .hit-area::after {
+      content: '';
+      position: absolute;
+      inset: -14px -10px;
+    }
+  }
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom), 0px);
   }

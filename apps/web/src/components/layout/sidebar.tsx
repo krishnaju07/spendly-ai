@@ -5,7 +5,8 @@ import { NavLink } from 'react-router';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSession } from '@/hooks/use-auth';
 import { useActivePill } from '@/hooks/use-active-pill';
-import { NAV } from '@/lib/nav';
+import { useMediaQuery } from '@/hooks/use-media-query';
+import { MAIN_NAV } from '@/lib/nav';
 import { initials } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { Logo } from './logo';
@@ -15,7 +16,8 @@ const KEY = 'spendly-sidebar';
 export function Sidebar() {
   const { user } = useSession();
   const navRef = useActivePill<HTMLElement>();
-  const [collapsed, setCollapsed] = useState(() => {
+  // what the person chose; it only applies where there is room for it (see `collapsed` below)
+  const [preferCollapsed, setPreferCollapsed] = useState(() => {
     try {
       const saved = localStorage.getItem(KEY);
       if (saved) return saved === 'collapsed';
@@ -24,8 +26,11 @@ export function Sidebar() {
     }
     return innerWidth < 1280;
   });
+  // a tablet or a narrow window has no room for the full sidebar, whatever was chosen on a wider screen: it stays a rail
+  const narrow = useMediaQuery('(max-width: 1023px)');
+  const collapsed = narrow || preferCollapsed;
   const toggle = () =>
-    setCollapsed((c) => {
+    setPreferCollapsed((c) => {
       try {
         localStorage.setItem(KEY, c ? 'expanded' : 'collapsed');
       } catch {
@@ -47,7 +52,7 @@ export function Sidebar() {
       </div>
 
       <nav ref={navRef} className="pill-host scrollbar-none flex flex-1 flex-col gap-1 overflow-y-auto">
-        {NAV.map((item) => {
+        {MAIN_NAV.map((item) => {
           const link = (
             <NavLink
               key={item.to}
@@ -96,7 +101,7 @@ export function Sidebar() {
           <PanelLeftClose className="size-[18px]" />
         </button>
       </div>
-      {collapsed && (
+      {collapsed && !narrow && (
         <button
           type="button"
           onClick={toggle}

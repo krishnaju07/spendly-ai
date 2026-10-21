@@ -70,6 +70,8 @@ settingsRouter.patch('/preferences', validate({ body: preferencesUpdateSchema })
   if (b.ai?.enabled === true && !auth.prefs.ai.enabled) set['ai.consentedAt'] = new Date();
   if (b.ai?.enabled === false) Object.assign(set, { 'ai.shareMerchantNames': false, 'ai.classifyUnknownMerchants': false, 'ai.readReceipts': false });
   if (b.consents?.emailImport === true && !auth.prefs.consents.emailImport) set['consents.emailImportAt'] = new Date();
+  // every saved list is a fresh, dated consent; an empty list withdraws it
+  if (b.tracking) Object.assign(set, { 'tracking.platforms': b.tracking.platforms, 'tracking.consentedAt': b.tracking.platforms.length ? new Date() : null });
   const prefs = await UserPreference.findOneAndUpdate({ userId: auth.userId }, { $set: set }, { returnDocument: 'after' }).lean();
   if (!prefs) throw notFound('Preferences');
   res.json({ data: toPreferencesDto(prefs) });

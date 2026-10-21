@@ -9,6 +9,7 @@ import { MAX_AMOUNT_PAISE } from './money';
 import { RANGE_PRESETS } from './dates';
 import { normalizePhone, OTP_LENGTH } from './phone';
 import { RULE_FIELDS, RULE_MATCH_TYPES, validateRulePattern } from './rules';
+import { MAX_TRACKED, isTrackable } from './tracking';
 
 export const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id');
 export const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD');
@@ -30,8 +31,16 @@ const otpField = z.string().regex(new RegExp(`^\\d{${OTP_LENGTH}}$`), `Enter the
 const personName = z.string().trim().min(1, 'Enter your name').max(80);
 
 export const otpRequestSchema = z.object({ phone: phoneSchema });
-/** `name` is only needed the first time a number signs in; without it the server asks for it. */
-export const otpVerifySchema = z.object({ phone: phoneSchema, otp: otpField, name: personName.optional() });
+/** The apps someone allowed Spendly to track: food and entertainment platforms only, each at most once. */
+export const trackedPlatformsSchema = z
+  .array(slug.refine(isTrackable, 'That app cannot be tracked'))
+  .max(MAX_TRACKED)
+  .transform((list) => [...new Set(list)]);
+/**
+ * `name` is only needed the first time a number signs in; without it the server asks for it. `tracked` is the list
+ * chosen before the code was sent — it is only recorded once the code is right, which is what confirms the consent.
+ */
+export const otpVerifySchema = z.object({ phone: phoneSchema, otp: otpField, name: personName.optional(), tracked: trackedPlatformsSchema.optional() });
 
 // ── transactions ───────────────────────────────────────────────────────────────────────────────
 
@@ -246,6 +255,8 @@ export const preferencesUpdateSchema = z
       .object({ budgetAlerts: z.boolean(), upcomingPayments: z.boolean(), importUpdates: z.boolean(), insights: z.boolean() })
       .partial(),
     consents: z.object({ emailImport: z.boolean() }).partial(),
+    /** The apps Spendly may track. Saving a list is a fresh consent, and is dated. */
+    tracking: z.object({ platforms: trackedPlatformsSchema }),
     onboardingCompleted: z.boolean(),
   })
   .partial();

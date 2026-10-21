@@ -60,6 +60,8 @@ export interface PreferencesDto {
   ai: { enabled: boolean; shareMerchantNames: boolean; classifyUnknownMerchants: boolean; readReceipts: boolean };
   notifications: { budgetAlerts: boolean; upcomingPayments: boolean; importUpdates: boolean; insights: boolean };
   consents: { emailImport: boolean };
+  /** Food and entertainment apps the person allowed Spendly to track; `consentedAt` is null until they have chosen. */
+  tracking: { platforms: string[]; consentedAt: string | null };
   onboardingCompleted: boolean;
 }
 

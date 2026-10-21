@@ -3,7 +3,7 @@ import { Ellipsis, Plus } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router';
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { useActivePill } from '@/hooks/use-active-pill';
-import { BOTTOM_TABS, NAV } from '@/lib/nav';
+import { BOTTOM_TABS, MAIN_NAV } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 
 /**
@@ -15,8 +15,8 @@ export function BottomNav({ onAdd }: { onAdd: () => void }) {
   const pillRef = useActivePill<HTMLDivElement>();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const tabs = NAV.filter((n) => (BOTTOM_TABS as readonly string[]).includes(n.to));
-  const rest = NAV.filter((n) => !(BOTTOM_TABS as readonly string[]).includes(n.to));
+  const tabs = MAIN_NAV.filter((n) => (BOTTOM_TABS as readonly string[]).includes(n.to));
+  const rest = MAIN_NAV.filter((n) => !(BOTTOM_TABS as readonly string[]).includes(n.to));
   const moreActive = rest.some((n) => pathname === n.to || pathname.startsWith(`${n.to}/`));
 
   return (

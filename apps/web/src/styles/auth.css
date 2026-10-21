@@ -463,6 +463,8 @@
 .note { display: flex; align-items: flex-start; gap: 10px; border-radius: 16px; padding: 10px 14px; font-size: 12.5px; line-height: 1.5; animation: swap-in 0.5s var(--ease-out) both; }
 .note[data-tone='dev'] { background: color-mix(in oklab, var(--status-warning) 15%, transparent); }
 .note[data-tone='off'] { background: var(--bad-soft); color: var(--bad); }
+.note[data-tone='info'] { background: color-mix(in oklab, var(--foreground) 6%, transparent); color: var(--muted-foreground); }
+.note[data-tone='info'] b { color: var(--foreground); }
 .dev-code { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; border-radius: 16px; padding: 8px 8px 8px 14px; background: color-mix(in oklab, var(--status-warning) 15%, transparent); font-size: 12.5px; animation: swap-in 0.5s var(--ease-out) both; }
 .dev-code b { font-size: 15px; letter-spacing: 0.16em; font-variant-numeric: tabular-nums; }
 .dev-code button { flex-shrink: 0; white-space: nowrap; border-radius: 9999px; background: var(--foreground); padding: 6px 14px; font-size: 12.5px; font-weight: 600; color: var(--background); outline: none; transition: transform 0.3s var(--spring-bouncy), opacity 0.2s; }

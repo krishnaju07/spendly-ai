@@ -36,7 +36,6 @@ export default defineConfig({
         ],
         shortcuts: [
           { name: 'Add a transaction', short_name: 'Add', url: '/transactions?new=1', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
-          { name: 'Import a statement', short_name: 'Import', url: '/import', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
           { name: 'Ask the Money Coach', short_name: 'Coach', url: '/coach', icons: [{ src: '/icons/icon-192.png', sizes: '192x192' }] },
         ],
       },

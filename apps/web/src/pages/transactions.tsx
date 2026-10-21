@@ -273,14 +273,14 @@ export default function Transactions() {
         <>
           {/* only the layout in use is built: a CSS-hidden 100-row table is still 100 rows of DOM (and logos) on a phone */}
           {isDesktop ? (
-            <div className={cn('overflow-hidden rounded-[32px] border bg-card shadow-card', data.isFetching && 'opacity-70 transition-opacity')}>
+            <div className={cn('@container overflow-hidden rounded-[32px] border bg-card shadow-card', data.isFetching && 'opacity-70 transition-opacity')}>
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="w-10 pl-5"><label className="-m-2 grid w-max cursor-pointer place-items-center p-2"><input type="checkbox" aria-label="Select all on this page" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(items.map((t) => t.id)) : new Set())} className="size-4 accent-[var(--series-1)]" /></label></TableHead>
                     <SortHead label="Merchant" k="merchant" sort={sort} order={order} onSort={onSort} />
-                    <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase lg:table-cell">Category</TableHead>
-                    <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase lg:table-cell">Paid with</TableHead>
+                    <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase @3xl:table-cell">Category</TableHead>
+                    <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase @3xl:table-cell">Paid with</TableHead>
                     <SortHead label="Date" k="date" sort={sort} order={order} onSort={onSort} />
                     <SortHead label="Amount" k="amount" sort={sort} order={order} onSort={onSort} className="pr-5 text-right [&>button]:ml-auto" />
                   </TableRow>
@@ -306,8 +306,8 @@ export default function Transactions() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden text-sm lg:table-cell">{t.categoryName ?? <span className="text-muted-foreground">Uncategorized</span>}</TableCell>
-                        <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">{PAYMENT_METHOD_LABELS[t.paymentMethod]}</TableCell>
+                        <TableCell className="hidden text-sm @3xl:table-cell">{t.categoryName ?? <span className="text-muted-foreground">Uncategorized</span>}</TableCell>
+                        <TableCell className="hidden text-sm text-muted-foreground @3xl:table-cell">{PAYMENT_METHOD_LABELS[t.paymentMethod]}</TableCell>
                         <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
                           {formatDate(t.date, tz, 'long')}
                           {t.status !== 'completed' && <Badge variant="warn" className="ml-2">{t.status}</Badge>}

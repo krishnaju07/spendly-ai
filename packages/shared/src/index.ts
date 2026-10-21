@@ -15,6 +15,8 @@ export * from './coach';
 export * from './privacy';
 export * from './demo';
 export * from './phone';
+export * from './tracking';
+export * from './providers';
 export * from './schemas';
 export * from './dto';
 export * from './catalog/categories';

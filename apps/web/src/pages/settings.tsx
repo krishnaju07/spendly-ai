@@ -11,6 +11,7 @@ import { CustomCategories } from '@/components/settings/categories';
 import { DataSettings } from '@/components/settings/data-danger';
 import { SecuritySettings } from '@/components/settings/security';
 import { SettingRow, SettingsCard } from '@/components/settings/setting-row';
+import { TrackedAppsSettings } from '@/components/settings/tracked-apps';
 import { TypefacePicker } from '@/components/settings/typeface-picker';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,7 @@ import { initials } from '@/lib/format';
 
 const TABS = [
   { id: 'general', label: 'General' },
+  { id: 'tracking', label: 'Tracked apps' },
   { id: 'security', label: 'Security' },
   { id: 'ai', label: 'AI & privacy' },
   { id: 'notifications', label: 'Notifications' },
@@ -160,7 +162,7 @@ function AppTab() {
       </Card>
       <Card className="gap-1">
         <h2 className="text-[15px] font-semibold tracking-tight">Spendly AI</h2>
-        <p className="text-[13px] text-muted-foreground">Every rupee tracked. Every decision smarter. Spendly recognises spending from statements and receipts you provide; it never logs in to your bank or shopping accounts.</p>
+        <p className="text-[13px] text-muted-foreground">Every rupee tracked. Every decision smarter. Spendly recognises spending from statements and receipts you provide; it never logs in to your food, entertainment or any other accounts.</p>
       </Card>
     </div>
   );
@@ -180,6 +182,7 @@ export default function Settings() {
       </Tabs>
       <div className="max-w-3xl">
         {tab === 'general' && <General />}
+        {tab === 'tracking' && <TrackedAppsSettings />}
         {tab === 'security' && <SecuritySettings />}
         {tab === 'ai' && <AiPrivacySettings />}
         {tab === 'notifications' && <Notifications />}

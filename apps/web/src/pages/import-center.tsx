@@ -170,7 +170,7 @@ function Integrations() {
 export default function ImportCenter() {
   return (
     <div className="space-y-6">
-      <PageHeader title="Import & Sync" subtitle="Spendly does not log in to your bank or to any shopping app. You export a statement or receipt yourself, upload it here, and check it before anything is saved." actions={<Button size="sm" variant="secondary" onClick={downloadTemplate}><Download /> CSV template</Button>} />
+      <PageHeader title="Import & Sync" subtitle="Spendly never logs in to your food, entertainment or any other app. You export a statement or receipt yourself, upload it here, and check it before anything is saved." actions={<Button size="sm" variant="secondary" onClick={downloadTemplate}><Download /> CSV template</Button>} />
       <UploadCard />
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <History />

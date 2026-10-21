@@ -7,15 +7,18 @@ import { prefersReducedMotion } from '@/hooks/use-reduced-motion';
 import { ApiRequestError } from '@/lib/api';
 import { FloatField } from './fields';
 import { OtpInput } from './otp-input';
+import { TrackList } from './track-list';
 
 export type Mode = 'login' | 'register';
-type Step = 'phone' | 'code' | 'name';
-const STEP_ORDER: Record<Step, number> = { phone: 0, code: 1, name: 2 };
+type Step = 'phone' | 'track' | 'code' | 'name';
+const STEP_ORDER: Record<Step, number> = { phone: 0, track: 1, code: 2, name: 3 };
 
 export interface VerifyInput {
   phone: string;
   otp: string;
   name?: string;
+  /** The apps allowed on the track step; recorded by the server once the code is right. */
+  tracked?: string[];
 }
 export type VerifyOutcome = { status: 'needs_name' } | { status: 'signed_in'; isNew: boolean };
 /** `false` until someone is in; then whether the number was new (“Welcome”) or known (“Welcome back”). */
@@ -66,7 +69,8 @@ function Problem({ text, id }: { text: string; id?: string }) {
 /**
  * Sign in and sign up are the same three steps: your mobile number, the code texted to it, and — only
  * for a number Spendly has not seen — your name. The segmented switch just decides whether the name
- * is asked for up front.
+ * is asked for up front. Creating an account adds one step before the code: which food and entertainment
+ * apps Spendly may track, so the code that follows also confirms that choice.
  */
 export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode, onVerify, onDemo }: Props) {
   const isRegister = mode === 'register';
@@ -82,6 +86,7 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
   // what the number field shows: plain digits are spaced as they are typed, but anything with a `+` is left alone until it loses focus
   const [raw, setRaw] = useState('');
   const [otp, setOtp] = useState('');
+  const [tracked, setTracked] = useState<string[]>([]);
   const [touched, setTouched] = useState({ name: false, phone: false });
   const [sent, setSent] = useState<Sent | null>(null);
   const [sending, setSending] = useState(false);
@@ -155,11 +160,18 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
     go('phone');
   };
 
-  const askForCode = async (form: HTMLElement | null) => {
+  const submitPhone = (form: HTMLElement | null) => {
     // the name field only exists up front when creating an account; otherwise it is asked for later, untouched
     setTouched({ name: isRegister, phone: true });
     if (!phone || (isRegister && !name.trim())) return shake(form);
     if (delivery === 'unavailable') return;
+    // a new account says what it may track before any code is sent; signing in goes straight to the code
+    if (isRegister) return go('track');
+    void sendCode(form);
+  };
+
+  const sendCode = async (form: HTMLElement | null) => {
+    if (!phone || delivery === 'unavailable') return;
     // the code just sent to this very number is still fresh: go back to it rather than texting another
     if (sent && sent.phone === phone && Date.now() - sent.sentAt < sent.cooldown.seconds * 1000) {
       setOtp('');
@@ -216,7 +228,7 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
     if (!sent || busy !== null) return;
     setProblem(null);
     try {
-      const r = await onVerify({ phone: sent.phone, otp: code, name: withName ?? (isRegister && name.trim() ? name.trim() : undefined) });
+      const r = await onVerify({ phone: sent.phone, otp: code, name: withName ?? (isRegister && name.trim() ? name.trim() : undefined), tracked: isRegister && tracked.length ? tracked : undefined });
       if (r.status === 'needs_name') {
         setTouched((t) => ({ ...t, name: false }));
         go('name');
@@ -249,22 +261,25 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
     }
   };
 
-  const title = step === 'code' ? 'Enter your code' : step === 'name' ? 'Nice to meet you' : isRegister ? 'Create your workspace' : 'Welcome back';
+  const title = step === 'track' ? 'Choose what to track' : step === 'code' ? 'Enter your code' : step === 'name' ? 'Nice to meet you' : isRegister ? 'Create your workspace' : 'Welcome back';
   const subtitle =
-    step === 'code' ? (
+    step === 'track' ? (
+      'Spendly only looks for spending from the apps you allow here.'
+    ) : step === 'code' ? (
       <>
         We sent a {OTP_LENGTH}-digit code to <b className="tnum font-semibold text-foreground">{sent ? maskPhone(sent.phone) : ''}</b>.
       </>
     ) : step === 'name' ? (
       'That number is new here. What should we call you?'
     ) : isRegister ? (
-      'A minute, no card and no bank login.'
+      'A minute, no card and no app passwords.'
     ) : (
       'Sign in with your mobile number — no password to remember.'
     );
 
   const cta = {
-    phone: { idle: 'Send code', busy: 'Sending code…' },
+    phone: { idle: isRegister ? 'Continue' : 'Send code', busy: 'Sending code…' },
+    track: { idle: 'Allow and send code', busy: 'Sending code…' },
     code: { idle: 'Verify and continue', busy: 'Checking…' },
     name: { idle: 'Create account', busy: 'Creating your workspace…' },
   }[step];
@@ -302,7 +317,7 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
       <div className="expand" data-open={step !== 'phone'} inert={step === 'phone'}>
         <div className="pb-5">
           <button type="button" onClick={back} disabled={busy !== null} className="back">
-            <ArrowLeft className="size-4" aria-hidden /> Change number
+            <ArrowLeft className="size-4" aria-hidden /> {step === 'track' ? 'Back' : 'Change number'}
           </button>
         </div>
       </div>
@@ -321,7 +336,7 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
             className="mt-6"
             onSubmit={(e: FormEvent<HTMLFormElement>) => {
               e.preventDefault();
-              void askForCode(e.currentTarget);
+              submitPhone(e.currentTarget);
             }}
           >
             <div className="expand" data-open={isRegister} inert={!isRegister}>
@@ -387,7 +402,40 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
             <button type="submit" className="cta mt-5" data-state={ctaState} disabled={locked || delivery === 'unavailable'}>
               {ctaBody}
             </button>
-            <p className="mt-3 px-1 text-xs leading-relaxed text-muted-foreground">We will text you a one-time code. Standard SMS rates from your operator may apply.</p>
+            <p className="mt-3 px-1 text-xs leading-relaxed text-muted-foreground">{isRegister ? 'Next you choose which apps to track, then we text you a one-time code.' : 'We will text you a one-time code.'} Standard SMS rates from your operator may apply.</p>
+          </form>
+        )}
+
+        {step === 'track' && (
+          <form
+            noValidate
+            className="mt-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!tracked.length) return shake(e.currentTarget);
+              void sendCode(e.currentTarget);
+            }}
+          >
+            <TrackList value={tracked} onChange={setTracked} disabled={locked} />
+            <div className="note mt-4" data-tone="info">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <span>
+                <b>What this allows.</b> Spendly recognises these apps in the statements, receipts and entries you add. It never signs in to them and never asks for their passwords. Change it any time in Settings.
+              </span>
+            </div>
+            {problem && <Problem text={problem} />}
+            <button type="submit" className="cta mt-5" data-state={ctaState} disabled={locked || tracked.length === 0}>
+              {ctaBody}
+            </button>
+            <p className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 text-[13px] text-muted-foreground">
+              <span>{tracked.length ? 'The code we text confirms this choice.' : 'Pick at least one app to allow.'}</span>
+              <button type="button" className="link" disabled={locked} onClick={() => {
+                  setTracked([]);
+                  void sendCode(null);
+                }}>
+                Skip for now
+              </button>
+            </p>
           </form>
         )}
 
@@ -507,7 +555,7 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
 
       <p className="trust mt-5">
         {[
-          [ShieldCheck, 'No bank passwords'],
+          [ShieldCheck, 'No app passwords'],
           [Lock, 'Private by default'],
           [Download, 'Export anytime'],
         ].map(([Icon, text], i) => {

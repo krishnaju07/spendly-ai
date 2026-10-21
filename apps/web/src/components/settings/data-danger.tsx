@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Download, FileJson, FileSpreadsheet, Smartphone, Trash2 } from 'lucide-react';
+import { Download, FileJson, FileSpreadsheet, FileUp, Smartphone, Trash2 } from 'lucide-react';
 import { maskPhone } from '@spendly/shared';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { Field } from '@/components/common/field';
 import { SettingRow, SettingsCard } from '@/components/settings/setting-row';
@@ -108,6 +108,11 @@ export function DataSettings() {
   };
   return (
     <div className="space-y-4">
+      <SettingsCard title="Bring in data" description="Add real spending from a statement or receipt you download yourself. You check it before anything is saved.">
+        <SettingRow title="Import a statement or receipt" description="CSV, Excel, a text PDF or an emailed receipt. Spendly never logs in to your apps.">
+          <Button variant="secondary" asChild><Link to="/import"><FileUp /> Open Import</Link></Button>
+        </SettingRow>
+      </SettingsCard>
       <SettingsCard title="Export your data" description="Your data is yours. Take a full copy any time, in open formats.">
         <SettingRow title="Everything (JSON)" description="Profile, preferences, transactions, budgets, goals, rules, recurring payments and import history. Amounts are in paise (₹1 = 100 paise).">
           <Button variant="secondary" disabled={busy !== null} onClick={() => void run('json', () => api.download('/settings/export', undefined, 'spendly-export.json'))}><FileJson /> {busy === 'json' ? 'Preparing…' : <><Download /> Download</>}</Button>

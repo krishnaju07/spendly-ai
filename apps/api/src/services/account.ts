@@ -8,7 +8,7 @@ import {
 import { env } from '../config/env';
 import { logger } from '../lib/logger';
 import type { AuthContext } from '../middleware/context';
-import { Notification, OtpChallenge, Session, User, UserPreference, type UserDoc, type UserPreferenceDoc } from '../models/account';
+import { Notification, OtpChallenge, ProviderConnection, ProviderFlow, Session, User, UserPreference, type UserDoc, type UserPreferenceDoc } from '../models/account';
 import { Category, MerchantRule, Platform, Transaction } from '../models/finance';
 import { ImportError, ImportJob, ImportRecord } from '../models/imports';
 import { AIInsight, Budget, RecurringPayment, SavingsGoal } from '../models/planning';
@@ -43,6 +43,8 @@ export const toPreferencesDto = (p: UserPreferenceDoc): PreferencesDto => ({
   },
   notifications: { ...p.notifications },
   consents: { emailImport: p.consents.emailImport },
+  // preferences saved before tracking existed have no such field
+  tracking: { platforms: p.tracking?.platforms ?? [], consentedAt: p.tracking?.consentedAt?.toISOString() ?? null },
   onboardingCompleted: p.onboardingCompleted,
 });
 
@@ -64,6 +66,8 @@ export async function deleteAllUserData(userId: Types.ObjectId): Promise<void> {
     AIInsight.deleteMany({ userId }),
     Notification.deleteMany({ userId }),
     Session.deleteMany({ userId }),
+    ProviderConnection.deleteMany({ userId }),
+    ProviderFlow.deleteMany({ userId }),
     UserPreference.deleteMany({ userId }),
     deleteUserFiles(userId),
   ]);

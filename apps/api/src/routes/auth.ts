@@ -44,7 +44,7 @@ authRouter.post('/otp/request', otpRequestLimiter, validate({ body: otpRequestSc
  * person can add their name and send the same code again.
  */
 authRouter.post('/otp/verify', otpVerifyLimiter, validate({ body: otpVerifySchema }), async (req, res) => {
-  const { phone, otp, name } = req.valid.body as z.output<typeof otpVerifySchema>;
+  const { phone, otp, name, tracked } = req.valid.body as z.output<typeof otpVerifySchema>;
   const challenge = await checkCode(phone, otp);
 
   let user = await User.findOne({ phone });
@@ -70,7 +70,11 @@ authRouter.post('/otp/verify', otpVerifyLimiter, validate({ body: otpVerifySchem
   }
   user.lastLoginAt = new Date();
   await user.save();
-  const prefs = await UserPreference.findOneAndUpdate({ userId: user._id }, { $setOnInsert: { userId: user._id } }, { upsert: true, returnDocument: 'after' });
+  let prefs = await UserPreference.findOneAndUpdate({ userId: user._id }, { $setOnInsert: { userId: user._id } }, { upsert: true, returnDocument: 'after' });
+  // the code was right, so the list chosen before it was sent is now a confirmed consent; one given earlier is never overwritten here
+  if (tracked?.length && !prefs.tracking?.consentedAt) {
+    prefs = await UserPreference.findOneAndUpdate({ userId: user._id }, { $set: { 'tracking.platforms': tracked, 'tracking.consentedAt': new Date() } }, { returnDocument: 'after' }) ?? prefs;
+  }
   const { csrfToken } = await startSession(req, res, user);
   const body: AuthResultDto = { status: 'signed_in', isNew, user: toUserDto(user.toObject()), preferences: toPreferencesDto(prefs.toObject()), csrfToken };
   res.status(isNew ? 201 : 200).json({ data: body });
