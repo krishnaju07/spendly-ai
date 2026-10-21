@@ -148,6 +148,7 @@ export function parseOrders(raw: unknown[], kind: 'food' | 'instamart', now = Da
   const orders: ProviderOrder[] = [];
   const missing = new Set<string>();
   let unreadable = 0;
+  let previous: Date | null = null;
   for (const item of raw) {
     if (!isObj(item)) {
       unreadable++;
@@ -156,7 +157,17 @@ export function parseOrders(raw: unknown[], kind: 'food' | 'instamart', now = Da
     const id = idOf(item);
     const bill = isObj(item.billDetails) ? item.billDetails : {};
     const amount = toPaise(pick(item, 'orderTotal', 'totalAmount', 'total', 'grandTotal') ?? pick(bill, 'grandTotal', 'total', 'toPay'));
-    const date = toDate(pick(item, 'orderedTime', 'orderTime', 'placedAt', 'createdAt', 'orderDate', 'ordered_at'), now);
+    const when = pick(item, 'orderedTime', 'orderTime', 'placedAt', 'createdAt', 'orderDate', 'ordered_at');
+    let date = toDate(when, now);
+    // orders come newest first and a time like "June 12, 7:45 PM" has no year: if the guess makes an order newer than
+    // the one before it, it belongs to an earlier year (someone who orders rarely can have five orders over two years)
+    if (date && previous && typeof when === 'string' && !/\b\d{4}\b/.test(when)) {
+      while (date.getTime() > previous.getTime() + 3_600_000) {
+        const earlier: Date = new Date(date.getTime());
+        earlier.setUTCFullYear(earlier.getUTCFullYear() - 1);
+        date = earlier;
+      }
+    }
     if (!id || !amount || !date) {
       unreadable++;
       // which part, never its value: enough to see what to teach the reader without exposing an order
@@ -165,6 +176,7 @@ export function parseOrders(raw: unknown[], kind: 'food' | 'instamart', now = Da
       if (!date) missing.add('time');
       continue;
     }
+    previous = date;
     const restaurant = pick(item, 'restaurantName', 'restaurant_name') ?? (isObj(item.restaurant) ? item.restaurant.name : undefined);
     const items = describeItems(pick(item, 'orderedItems', 'items'));
     const description = [typeof restaurant === 'string' ? restaurant : '', items].filter(Boolean).join(' · ').slice(0, 480) || (kind === 'food' ? 'Swiggy order' : 'Instamart order');
