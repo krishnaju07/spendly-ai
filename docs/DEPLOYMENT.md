@@ -63,6 +63,19 @@ server {
 
 The API sets a strict Content-Security-Policy, HSTS, `frame-ancestors 'none'` and related headers itself. Do not cache `/api/*`, `/sw.js` or `/index.html` at the proxy (the API already sends `no-cache` for the service worker, manifest and HTML).
 
+## Cloudflare Pages auto-deploy
+
+The web app can sit on Cloudflare Pages with the API on Render (see [render.yaml](../render.yaml)). [`deploy/cloudflare/_worker.js`](../deploy/cloudflare/_worker.js) serves the built app and forwards `/api/*` to the backend, so the browser keeps one origin. [`.github/workflows/deploy-cloudflare.yml`](../.github/workflows/deploy-cloudflare.yml) builds the web app and publishes it on every push to `main`, whatever changed (the backend deploys separately through Render). It also runs from the Actions tab (**Run workflow**).
+
+One-time setup:
+
+1. **API token** — Cloudflare dashboard → My Profile → API Tokens → Create Token → template **Edit Cloudflare Workers**, or a custom token with **Account → Cloudflare Pages → Edit**.
+2. **Account ID** — shown in the dashboard sidebar of any zone or under Workers & Pages.
+3. **GitHub** → repository Settings → Secrets and variables → Actions: add the secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. If the Pages project is not called `spendly-ai`, add a repository **variable** `CLOUDFLARE_PAGES_PROJECT` with its name.
+4. The Pages project's production branch must be `main`. Set `API_ORIGIN` on the project (Settings → Variables) if the backend is not at the fallback address in the worker, and set the backend's `APP_ORIGIN` to the Pages address.
+
+A Pages project created by uploading a zip (Direct Upload) cannot be switched to Cloudflare's own Git integration, which is why the workflow publishes with Wrangler instead; it works for both kinds of project.
+
 ## Operations
 
 - **Health:** `GET /api/v1/health` (200 `ok`, 503 `degraded` when MongoDB is unreachable).

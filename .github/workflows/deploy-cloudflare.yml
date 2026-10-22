@@ -1,0 +1,42 @@
+# Deploys the web app (apps/web/dist + the /api proxy worker) to Cloudflare Pages on every push to main, whatever changed.
+# The backend deploys itself through Render (render.yaml). Setup: docs/DEPLOYMENT.md#cloudflare-pages-auto-deploy
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare-pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build -w @spendly/web
+
+      # Pages "advanced mode": the worker has to sit in the root of the uploaded folder.
+      - run: cp deploy/cloudflare/_worker.js apps/web/dist/_worker.js
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: pages deploy apps/web/dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT || 'spendly-ai' }} --branch=main
