@@ -9,7 +9,7 @@ import { logger } from '../lib/logger';
  * app can be tried locally, and the sign-in screen says so when one is active.
  */
 export interface SmsProvider {
-  id: 'console' | 'twilio' | 'webhook';
+  id: 'console' | 'screen' | 'twilio' | 'webhook';
   mode: 'dev' | 'sms';
   send(to: string, code: string): Promise<void>;
 }
@@ -40,6 +40,18 @@ const consoleProvider: SmsProvider = {
   mode: 'dev',
   async send(to, code) {
     logger.warn({ to: maskPhone(to) }, `DEV MODE — sign-in code ${code} (no SMS was sent)`);
+  },
+};
+
+/**
+ * Shows the code on the sign-in screen, for trying a server before an SMS provider is set up. Unlike `console` it answers
+ * every request, so it is opt-in (SMS_PROVIDER=screen) and anyone can then sign in as any number that is not an owner.
+ */
+const screenProvider: SmsProvider = {
+  id: 'screen',
+  mode: 'dev',
+  async send(to) {
+    logger.warn({ to: maskPhone(to) }, 'TEST MODE — sign-in code shown on screen (no SMS was sent)');
   },
 };
 
@@ -90,6 +102,8 @@ export function getSmsProvider(viaLoopback = false): SmsProvider | null {
   switch (env.SMS_PROVIDER) {
     case 'console':
       return viaLoopback ? consoleProvider : null;
+    case 'screen':
+      return screenProvider;
     case 'twilio':
       return twilioProvider;
     case 'webhook':

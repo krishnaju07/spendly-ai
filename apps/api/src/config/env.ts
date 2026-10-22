@@ -65,7 +65,7 @@ const schema = z.object({
   GMAIL_CLIENT_ID: z.string().optional(),
   GMAIL_CLIENT_SECRET: z.string().optional(),
   // sign-in codes: people sign in with a code texted to their mobile number
-  SMS_PROVIDER: z.enum(['none', 'console', 'twilio', 'webhook']).optional(),
+  SMS_PROVIDER: z.enum(['none', 'console', 'screen', 'twilio', 'webhook']).optional(),
   SMS_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(10_000),
   OTP_TTL_MINUTES: z.coerce.number().int().min(1).max(30).default(5),
   OTP_RESEND_SECONDS: z.coerce.number().int().min(10).max(600).default(30),
@@ -117,6 +117,10 @@ if (raw.AI_PROVIDER !== 'none' && !raw.AI_API_KEY) {
 const smsProvider = raw.SMS_PROVIDER ?? (isProd ? 'none' : 'console');
 if (smsProvider === 'console' && isProd) {
   throw new Error('SMS_PROVIDER=console is for development only (it shows sign-in codes on screen). Use twilio or webhook in production.');
+}
+if (smsProvider === 'screen' && isProd) {
+  // unlike `console` this is allowed in production, on purpose, so a public site can be tried before SMS is set up
+  console.warn('[auth] SMS_PROVIDER=screen: sign-in codes are shown on the sign-in screen, so anyone can sign in as any number except OWNER_PHONES. Use it only while testing.');
 }
 if (smsProvider === 'twilio' && !(raw.TWILIO_ACCOUNT_SID && raw.TWILIO_AUTH_TOKEN && (raw.TWILIO_FROM || raw.TWILIO_MESSAGING_SERVICE_SID))) {
   throw new Error('SMS_PROVIDER=twilio requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_FROM (or TWILIO_MESSAGING_SERVICE_SID).');

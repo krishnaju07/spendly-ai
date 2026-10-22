@@ -80,8 +80,10 @@ export interface AuthConfigDto {
 export interface OtpRequestResultDto {
   resendInSeconds: number;
   expiresInSeconds: number;
-  /** Only in development mode (no SMS is sent): the code, so it can be shown on screen. Never present in production. */
+  /** Only when no SMS is sent (development or test mode): the code, so it can be shown on screen. */
   devCode?: string;
+  /** The code is in the person's authenticator app: nothing was texted or shown. */
+  viaApp?: boolean;
 }
 
 /** `needs_name`: the code was right but the number is new — ask for a name and verify again with it. */

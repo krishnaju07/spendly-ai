@@ -31,7 +31,7 @@ function DeleteAccount() {
     onSuccess: (r) => {
       setCooldown({ seconds: r.resendInSeconds });
       setDevCode(r.devCode ?? null);
-      toast.success(r.devCode ? 'Development mode: the code is shown below' : `Code sent to ${maskPhone(phone)}`);
+      toast.success(r.devCode ? 'Test mode: the code is shown below' : `Code sent to ${maskPhone(phone)}`);
     },
   });
   const del = useMutation({
@@ -74,7 +74,7 @@ function DeleteAccount() {
                   <Button type="button" variant="secondary" disabled={send.isPending || left > 0} onClick={() => send.mutate()}>
                     <Smartphone /> {send.isPending ? 'Sending…' : left > 0 ? `Send again in ${left}s` : cooldown ? 'Send a new code' : 'Text me a code'}
                   </Button>
-                  {devCode && <span className="rounded-full bg-muted px-3 py-1.5 text-xs">Development mode — your code is <b className="tnum tracking-[0.14em]">{devCode}</b></span>}
+                  {devCode && <span className="rounded-full bg-muted px-3 py-1.5 text-xs">Test mode — your code is<b className="tnum tracking-[0.14em]">{devCode}</b></span>}
                 </div>
                 <Field label="6-digit code" htmlFor="del-otp">
                   <Input id="del-otp" inputMode="numeric" pattern="[0-9]*" autoComplete="one-time-code" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} disabled={!cooldown} placeholder={cooldown ? '' : 'Ask for a code first'} className="tnum tracking-[0.3em]" />

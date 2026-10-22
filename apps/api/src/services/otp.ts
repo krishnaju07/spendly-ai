@@ -6,7 +6,7 @@ import { otpDigest, safeEqual } from '../lib/crypto';
 import { AppError, unavailable } from '../lib/errors';
 import { OtpChallenge } from '../models/account';
 import { matchTotp } from '../lib/totp';
-import { getSmsProvider, usesAuthenticator } from './sms';
+import { getSmsProvider } from './sms';
 
 const HOUR_MS = 3_600_000;
 /** How long a correct code stays usable while someone with a brand-new number types their name. */
@@ -20,9 +20,10 @@ const expired = () => new AppError(400, 'CODE_EXPIRED', 'That code has expired. 
  * number stop it being used to flood someone's phone.
  */
 export async function requestCode(phone: string, viaLoopback: boolean): Promise<OtpRequestResultDto> {
-  const authenticator = usesAuthenticator(viaLoopback);
   const provider = getSmsProvider(viaLoopback);
-  if (!provider && !authenticator) throw unavailable('Sign-in codes by SMS are not set up on this server yet.', 'SMS_NOT_CONFIGURED');
+  // with no provider at all, the owners' authenticator is the only way in
+  const appOnly = !provider && env.ownerTotpKey !== null;
+  if (!provider && !appOnly) throw unavailable('Sign-in codes by SMS are not set up on this server yet.', 'SMS_NOT_CONFIGURED');
   const now = Date.now();
 
   const latest = await OtpChallenge.findOne({ phone }).sort({ createdAt: -1 }).select('createdAt').lean();
@@ -38,12 +39,14 @@ export async function requestCode(phone: string, viaLoopback: boolean): Promise<
   }
 
   const code = String(randomInt(0, 10 ** OTP_LENGTH)).padStart(OTP_LENGTH, '0');
-  // Nothing is sent. The answer is the same for every number (so this cannot reveal who the owners are), and only an
+  // An owner uses the authenticator unless real texts are on, so a code shown on screen can never open an owner's account.
+  // Where there is no provider the answer is the same for every number (this cannot reveal who the owners are), and only an
   // owner's challenge is checked against the authenticator; anyone else's holds a random code nobody has seen.
-  const method = authenticator && env.ownerPhones.includes(phone) ? 'authenticator' : 'sms';
+  const ownerApp = env.ownerTotpKey !== null && env.ownerPhones.includes(phone) && provider?.mode !== 'sms';
+  const method = ownerApp ? 'authenticator' : 'sms';
   const challenge = await OtpChallenge.create({ phone, codeHash: otpDigest(phone, code), method, expiresAt: new Date(now + env.OTP_TTL_MINUTES * 60_000) });
   try {
-    if (provider) await provider.send(phone, code);
+    if (provider && !ownerApp) await provider.send(phone, code);
   } catch (error) {
     // a code that never went out should not count against the number's cap or delay the next try
     await OtpChallenge.deleteOne({ _id: challenge._id });
@@ -54,7 +57,8 @@ export async function requestCode(phone: string, viaLoopback: boolean): Promise<
   return {
     resendInSeconds: env.OTP_RESEND_SECONDS,
     expiresInSeconds: env.OTP_TTL_MINUTES * 60,
-    ...(provider?.mode === 'dev' ? { devCode: code } : {}),
+    ...(provider?.mode === 'dev' && !ownerApp ? { devCode: code } : {}),
+    ...(appOnly || ownerApp ? { viaApp: true } : {}),
   };
 }
 

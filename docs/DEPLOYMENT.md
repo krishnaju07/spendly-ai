@@ -71,7 +71,15 @@ Production refuses the development `console` provider, so with no `SMS_PROVIDER`
 2. On the server (Render → Environment) set `OWNER_PHONES` to your mobile number and `OWNER_TOTP_SECRET` to the secret, then redeploy. Both are required together.
 3. On the sign-in screen enter that number and then the code from the app. The first time, Spendly asks for your name and creates the account.
 
-Only the numbers in `OWNER_PHONES` can sign in this way, and the screen answers the same for every number, so it does not reveal which ones they are. A code works for one sign-in only (a second sign-in with the same code within 30 seconds is refused), and the same attempt and request limits apply as to texted codes. If you also configure an SMS provider, texting is used for everyone and `OWNER_*` is ignored.
+Only the numbers in `OWNER_PHONES` can sign in this way, and the screen answers the same for every number, so it does not reveal which ones they are. A code works for one sign-in only (a second sign-in with the same code within 30 seconds is refused), and the same attempt and request limits apply as to texted codes. If you configure a real SMS provider (`twilio` or `webhook`), texting is used for everyone and `OWNER_*` is ignored.
+
+## Showing codes on screen while testing
+
+To let testers use the real sign-in page before an SMS provider exists, set `SMS_PROVIDER=screen` on the server. Nothing is texted; the code appears on the sign-in screen ("Test mode") and a button fills it in. The API logs a warning at startup.
+
+**This lets anyone who knows a mobile number sign in as that number, with its data.** Use it only while testing, with no real accounts linked, and switch it off afterwards (unset `SMS_PROVIDER`, or move to `twilio` / `webhook`). Numbers in `OWNER_PHONES` are not affected: they keep using their authenticator code, so set those first if you will keep real data on the same server. Anyone can still see *which* numbers are owners, because they are the ones that are not shown a code.
+
+Testers can also use the demo workspace, which needs none of this.
 
 ## Cloudflare Pages auto-deploy
 

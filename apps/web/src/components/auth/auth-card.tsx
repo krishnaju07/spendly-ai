@@ -41,8 +41,10 @@ interface Sent {
   /** When the code went out, and how long to wait before asking for another. */
   sentAt: number;
   cooldown: Cooldown;
-  /** Development mode only: the code the server printed instead of texting. */
+  /** Test mode only: the code the server showed instead of texting. */
   devCode?: string;
+  /** The code is in the person's authenticator app (an owner, or a server with no texting). */
+  viaApp?: boolean;
 }
 
 const PHONE_HINT = 'Enter a 10-digit mobile number starting with 6, 7, 8 or 9';
@@ -182,7 +184,7 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
     setProblem(null);
     try {
       const r = await onRequestCode(phone);
-      setSent({ phone, sentAt: Date.now(), cooldown: { seconds: r.resendInSeconds }, devCode: r.devCode });
+      setSent({ phone, sentAt: Date.now(), cooldown: { seconds: r.resendInSeconds }, devCode: r.devCode, viaApp: r.viaApp });
       setOtp('');
       setOtpState('idle');
       go('code');
@@ -209,7 +211,7 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
     setProblem(null);
     try {
       const r = await onRequestCode(sent.phone);
-      setSent({ phone: sent.phone, sentAt: Date.now(), cooldown: { seconds: r.resendInSeconds }, devCode: r.devCode });
+      setSent({ phone: sent.phone, sentAt: Date.now(), cooldown: { seconds: r.resendInSeconds }, devCode: r.devCode, viaApp: r.viaApp });
       setOtp('');
       setOtpState('idle');
       otpRef.current?.focus({ preventScroll: true });
@@ -263,12 +265,14 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
 
   // nothing is texted: the owner types the code from an authenticator app
   const byApp = delivery === 'authenticator';
+  // the code step too: an owner on a server that shows codes to everyone else still reads theirs from the app
+  const appCode = byApp || sent?.viaApp === true;
 
   const title = step === 'track' ? 'Choose what to track' : step === 'code' ? 'Enter your code' : step === 'name' ? 'Nice to meet you' : isRegister ? 'Create your workspace' : 'Welcome back';
   const subtitle =
     step === 'track' ? (
       'Spendly only looks for spending from the apps you allow here.'
-    ) : step === 'code' && byApp ? (
+    ) : step === 'code' && appCode ? (
       <>
         Open your authenticator app and enter the {OTP_LENGTH}-digit code for <b className="tnum font-semibold text-foreground">{sent ? maskPhone(sent.phone) : ''}</b>.
       </>
@@ -400,7 +404,7 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
               <div className="note mt-3" data-tone="dev">
                 <FlaskConical className="mt-0.5 size-4 shrink-0" aria-hidden />
                 <span>
-                  <b>Development mode.</b> No text message is sent — your code appears on the next screen.
+                  <b>Test mode.</b> No text message is sent — your code appears on the next screen.
                 </span>
               </div>
             )}
@@ -487,7 +491,7 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
             {sent?.devCode && (
               <div className="dev-code">
                 <span>
-                  Development mode — your code is <b>{sent.devCode}</b>
+                  Test mode — your code is <b>{sent.devCode}</b>
                 </span>
                 <button
                   type="button"
@@ -506,14 +510,14 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
               {ctaBody}
             </button>
             <p className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
-              <span>{byApp ? 'Code not accepted?' : 'Did not get it?'}</span>
+              <span>{appCode ? 'Code not accepted?' : 'Did not get it?'}</span>
               {left > 0 ? (
                 <span className="tnum" aria-live="off">
-                  {byApp ? 'Start over' : 'Send a new code'} in {clock(left)}
+                  {appCode ? 'Start over' : 'Send a new code'} in {clock(left)}
                 </span>
               ) : (
                 <button type="button" className="link" onClick={() => void resend()} disabled={sending || busy !== null}>
-                  {sending ? (byApp ? 'One moment…' : 'Sending…') : byApp ? 'Start over' : 'Send a new code'}
+                  {sending ? (appCode ? 'One moment…' : 'Sending…') : appCode ? 'Start over' : 'Send a new code'}
                 </button>
               )}
             </p>

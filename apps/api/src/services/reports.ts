@@ -39,7 +39,9 @@ const pct = (v: number | null) => (v === null ? 'new' : Math.round(v) === 0 ? 'u
 function deltaOf(change: number | null): { delta?: string; tone?: 'good' | 'bad' | 'flat' } {
   if (change === null) return { delta: 'new', tone: 'flat' };
   const rounded = Math.round(change);
-  return { delta: pct(change), tone: rounded === 0 ? 'flat' : rounded > 0 ? 'bad' : 'good' };
+  // A tiny earlier period turns a small change into a four-digit percentage that reads like a bug.
+  const delta = rounded > 999 ? '> +999%' : pct(change);
+  return { delta, tone: rounded === 0 ? 'flat' : rounded > 0 ? 'bad' : 'good' };
 }
 
 /** One bar per local day from the start of the range to today (or its end), days with no spending as zero. */
