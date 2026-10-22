@@ -23,7 +23,7 @@ import { authOf } from '../middleware/context';
 import { exportLimiter, uploadLimiter } from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
 import { Transaction, type TransactionDoc } from '../models/finance';
-import { totalsForMatch } from '../services/analytics';
+import { totalsForMatch, transactionInsights } from '../services/analytics';
 import { checkBudgetAlerts } from '../services/budgets';
 import { deleteFile, openFile, saveFile } from '../services/files';
 import { loadLookups } from '../services/lookups';
@@ -42,6 +42,8 @@ const listQuery = rangeQuery.extend(filterQuery.shape).extend(pageQuery.shape).e
   needsReview: z.enum(['true', 'false']).optional(),
   duplicates: z.enum(['true', 'false']).optional(),
   recurring: z.enum(['true', 'false']).optional(),
+  /** Only orders that arrived through a linked account (Swiggy, Zepto, Zomato). */
+  linked: z.enum(['true', 'false']).optional(),
   /** Only transactions created by one import (used by "view imported transactions"). */
   importJob: z.string().regex(/^[a-f\d]{24}$/i).optional(),
 });
@@ -73,17 +75,29 @@ function searchClause(q: string, tz: string): QueryFilter<TransactionDoc> {
   return { $or: clauses };
 }
 
-transactionsRouter.get('/', validate({ query: listQuery }), async (req, res) => {
-  const auth = authOf(req);
-  const q = req.valid.query as ListQuery;
+/** Everything the list and its insights share: range, filters, quick views and search. */
+function listMatch(auth: ReturnType<typeof authOf>, q: ListQuery): QueryFilter<TransactionDoc> {
   const range = q.preset || q.from || q.to ? rangesFor(auth, q).range : undefined;
   const match = buildMatch(auth, { range, filters: q }) as QueryFilter<TransactionDoc>;
   if (q.tag) match.tags = q.tag;
   if (q.needsReview === 'true') match['classification.needsReview'] = true;
   if (q.duplicates === 'true') match.duplicateStatus = 'possible';
   if (q.recurring === 'true') match.recurringPaymentId = { $ne: null };
+  if (q.linked === 'true') match.importSource = 'integration';
   if (q.importJob) match.importJobId = new Types.ObjectId(q.importJob);
   if (q.q) Object.assign(match, searchClause(q.q, auth.tz));
+  return match;
+}
+
+transactionsRouter.get('/insights', validate({ query: listQuery }), async (req, res) => {
+  const auth = authOf(req);
+  res.json({ data: await transactionInsights(listMatch(auth, req.valid.query as ListQuery), auth.tz) });
+});
+
+transactionsRouter.get('/', validate({ query: listQuery }), async (req, res) => {
+  const auth = authOf(req);
+  const q = req.valid.query as ListQuery;
+  const match = listMatch(auth, q);
 
   const dir = q.order === 'asc' ? 1 : -1;
   const sort: Record<string, 1 | -1> =

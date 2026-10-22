@@ -24,6 +24,7 @@ export function toTransactionDto(t: TransactionDoc, lk: Lookups): TransactionDto
     tags: t.tags,
     receipt: t.receipt ? { filename: t.receipt.filename, mimeType: t.receipt.mimeType, size: t.receipt.size } : null,
     importSource: t.importSource,
+    orderDetail: t.orderDetail ?? null,
     externalRef: t.externalRef,
     importJobId: t.importJobId?.toString() ?? null,
     refundOfId: t.refundOfId?.toString() ?? null,

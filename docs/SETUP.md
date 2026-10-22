@@ -52,17 +52,17 @@ Open the app in Chrome, Edge or Safari. Chrome and Edge show an install icon in 
 
 Spendly never asks for bank, UPI or shopping-app credentials, PINs or OTPs. The only code it ever handles is its own sign-in code, texted to your own number.
 
-## Linking Swiggy and Zepto
+## Linking Swiggy, Zepto and Zomato
 
-**Settings → Tracked apps → Link your accounts** signs Spendly in to your own Swiggy or Zepto account through their official MCP servers, so your orders arrive without a file.
+**Settings → Tracked apps → Link your accounts** signs Spendly in to your own Swiggy, Zepto or Zomato account through their official MCP servers, so your orders arrive without a file.
 
 - **Where you sign in.** A small window opens on the service's own page, where you enter your phone number and the OTP the service texts you. It closes itself when you are done and Settings updates; if a browser blocks the window, the same steps happen in the current tab. Spendly never sees the OTP or a password, and it will not ask for one: a form on Spendly that took another service's OTP would be relaying a login code, which these services do not allow (Swiggy documents its OTP endpoints as not callable by other apps).
 - **What Spendly keeps.** A token that can read your order history, encrypted (AES-256-GCM, keyed from `SESSION_SECRET`). It only calls the read-only history tools, enforced in code. Unlinking forgets the token.
 - **Swiggy** shares your latest Food orders (up to 15) and your Instamart orders from the last 15 days, so each sync is stored and history builds up over time. Food and Instamart are read only if their own entries are ticked.
 - **Zepto** (beta): the first sync shows what Zepto sent and waits for you to confirm before anything is saved, because the order tool's reply has not been checked on a real account yet.
 - **Return address.** Spendly registers itself with the service for `APP_ORIGIN` + `/callback` (for development `http://localhost:5173/callback`). Both accept `localhost` addresses for development; a Spendly on a public https address has to be approved first ([Swiggy Builders Club](https://mcp.swiggy.com/builders/access/), or a request on Zepto's GitHub). Swiggy's terms say data may only serve the user's immediate task and that analytics needs separate consent, so ask builders@swiggy.in whether personal spend tracking is allowed before offering this to other people.
-- **Zomato** has an official MCP server but is not allowing third-party apps on it, so its link is shown as unavailable until Zomato opens access.
-- Other apps (Netflix, Spotify, BookMyShow …) have no sign-in like this; their spending comes from statements, receipts and entries you add.
+- **Zomato** (beta) shares your order history newest first; the first sync reads up to your latest 200 orders. Zomato says its sign-in is for personal-use apps from return addresses it has approved: a Spendly on your own computer signed in on a real account. If Zomato refuses yours, the access form is linked from its public MCP page (github.com/Zomato/mcp-server-manifest).
+- Other apps (Netflix, Spotify, BookMyShow …) have no sign-in like this. Settings → Tracked apps → Other apps explains, app by app, what to download and upload in Import. Any of them also works from **a screenshot of its order-history screen**: with “Read receipt photos” on (Settings → AI & privacy), Spendly's AI reads every order on the screenshot, and you check each date and amount before anything is saved.
 
 ## Troubleshooting
 

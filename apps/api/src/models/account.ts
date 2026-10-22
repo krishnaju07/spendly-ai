@@ -29,11 +29,14 @@ userSchema.index({ isDemo: 1, demoExpiresAt: 1 });
 
 export const User = model<UserDoc>('User', userSchema);
 
-/** One texted sign-in code. Only a keyed hash of the code is stored. */
+/** One sign-in code. A texted one is stored only as a keyed hash; an `authenticator` one is checked against the owner's app instead. */
 export interface OtpChallengeDoc {
   _id: Types.ObjectId;
   phone: string;
   codeHash: string;
+  method: 'sms' | 'authenticator';
+  /** The authenticator step this challenge was signed in with, so the same code cannot start a second session. */
+  totpStep?: number;
   attempts: number;
   expiresAt: Date;
   consumedAt: Date | null;
@@ -44,6 +47,8 @@ const otpChallengeSchema = new Schema<OtpChallengeDoc>(
   {
     phone: { type: String, required: true, maxlength: 16 },
     codeHash: { type: String, required: true },
+    method: { type: String, enum: ['sms', 'authenticator'], default: 'sms' },
+    totpStep: { type: Number },
     attempts: { type: Number, default: 0 },
     expiresAt: { type: Date, required: true },
     consumedAt: { type: Date, default: null },

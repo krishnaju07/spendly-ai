@@ -1,4 +1,4 @@
-import { ChevronDown, FileUp } from 'lucide-react';
+import { Camera, ChevronDown, FileUp } from 'lucide-react';
 import { Link } from 'react-router';
 import { APP_GUIDES, type AppGuide } from '@spendly/shared';
 import { PlatformLogo } from '@/components/common/platform-logo';
@@ -60,6 +60,13 @@ export function AppGuides() {
     <Card className="gap-1">
       <h2 className="text-[15px] font-semibold tracking-tight">Other apps</h2>
       <p className="text-[13px] text-muted-foreground">These apps do not let Spendly sign in to them, so you bring their spending in yourself: download your own receipt or export, then upload it in Import. You check every row before anything is saved. What each app does and does not offer comes from its own pages; where that could not be confirmed, it says so.</p>
+      <section className="mt-3 rounded-2xl bg-muted/60 px-4 py-3">
+        <h3 className="flex items-center gap-2 text-[13px] font-semibold"><Camera className="size-4" aria-hidden /> Any app: screenshot its order history</h3>
+        <p className="mt-1.5 text-[13px] text-muted-foreground">Every one of these apps shows your past orders or payments on a screen. Take a screenshot of it and upload it in Import: Spendly’s AI reads every order on the screenshot, and you check each date and amount against the app before anything is saved. It needs “Read receipt photos” switched on under Settings → AI &amp; privacy, and the screenshot is sent to your AI provider.</p>
+        <Button asChild size="sm" variant="secondary" className="mt-3">
+          <Link to="/import?kind=receipt"><FileUp /> Open Import</Link>
+        </Button>
+      </section>
       <div className="mt-3 divide-y">
         {guides.map((g) => <Row key={g.slug} guide={g} tracked={tracked.has(g.slug)} />)}
       </div>

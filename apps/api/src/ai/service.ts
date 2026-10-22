@@ -265,6 +265,10 @@ const readingsSchema = z.object({
 });
 export type OrderReading = z.infer<typeof readingSchema>;
 
+/** The instructions for reading a receipt or an order-history screenshot (exported so a model can be tried against exactly this). */
+export const READ_ORDERS_SYSTEM =
+  'You read purchase receipts and screenshots of order-history or payment-history screens from food, grocery and entertainment apps. Return ONE JSON object and nothing else: {"app":string|null,"orders":[{"merchant":string|null,"date":string|null,"total":"amount as printed, digits and decimal point only"|null,"currency":"INR"|…|null}]}. "app" is the app\'s name if it is visible on screen. Give one entry in "orders" per separate purchase or order. A single receipt is ONE entry with its grand total, never its line items. "merchant" is the restaurant, shop or service named on that entry. "date" is exactly as printed (for example "8 Oct 2026" or "Oct 8, 12:30 PM"). Skip cancelled or refunded entries. Use null for anything you cannot read clearly. Never guess a figure.';
+
 /**
  * Reads a receipt, or a screenshot of an app's order-history screen, into one entry per purchase. A photo of one
  * receipt gives one entry; an order list gives many. Every figure goes to the person to check before it is saved.
@@ -275,8 +279,7 @@ export async function readOrdersWithLlm(prefs: Pick<UserPreferenceDoc, 'ai'>, im
   if (!gate.allowed || !provider?.supportsVision) return null;
   try {
     const response = await provider.complete({
-      system:
-        'You read purchase receipts and screenshots of order-history or payment-history screens from food, grocery and entertainment apps. Return ONE JSON object and nothing else: {"app":string|null,"orders":[{"merchant":string|null,"date":string|null,"total":"amount as printed, digits and decimal point only"|null,"currency":"INR"|…|null}]}. "app" is the app\'s name if it is visible on screen. Give one entry in "orders" per separate purchase or order. A single receipt is ONE entry with its grand total, never its line items. "merchant" is the restaurant, shop or service named on that entry. "date" is exactly as printed (for example "8 Oct 2026" or "Oct 8, 12:30 PM"). Skip cancelled or refunded entries. Use null for anything you cannot read clearly. Never guess a figure.',
+      system: READ_ORDERS_SYSTEM,
       user: 'Read this image.',
       image,
       effort: 'low',

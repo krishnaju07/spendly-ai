@@ -5,7 +5,8 @@ import { PlatformLogo } from '@/components/common/platform-logo';
 import { CategoryIcon, seriesVar } from '@/components/common/category-icon';
 import { useCatalog } from '@/hooks/use-catalog';
 import { formatTime } from '@/lib/format';
-import { PAYMENT_METHOD_LABELS } from '@spendly/shared';
+import { paidWithOf } from '@/lib/labels';
+import { DishChips, detailOfTxn } from './order-detail';
 import { cn } from '@/lib/utils';
 
 /** Amount as it reads in a ledger: expenses negative, refunds and income green and positive, transfers neutral. */
@@ -27,6 +28,7 @@ export function TxnRow({ t, tz, onOpen, selected, onSelect, showDate = false }: 
   const cat = useCatalog();
   const platform = cat.platform(t.platform);
   const category = cat.category(t.category);
+  const order = detailOfTxn(t);
   return (
     <div className={cn('group relative flex items-center gap-3 rounded-2xl px-2 py-2.5 transition-colors', 'hover:bg-accent/70', selected && 'bg-accent')}>
       {onSelect && (
@@ -47,7 +49,7 @@ export function TxnRow({ t, tz, onOpen, selected, onSelect, showDate = false }: 
         {platform ? <PlatformLogo platform={platform} size={42} /> : <CategoryIcon icon={category?.icon} color={seriesVar(category?.slot)} size={42} />}
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="truncate text-[15px] font-medium">{t.merchantName}</span>
+            <span className="truncate text-[15px] font-medium">{order?.place ?? t.merchantName}</span>
             {t.classification.needsReview && (
               <>
                 <CircleHelp className="size-3.5 shrink-0 text-[var(--status-warning)]" aria-hidden />
@@ -74,13 +76,25 @@ export function TxnRow({ t, tz, onOpen, selected, onSelect, showDate = false }: 
             )}
             {t.type === 'transfer' && <ArrowLeftRight className="size-3.5 shrink-0 opacity-50" aria-hidden />}
           </span>
-          <span className="block truncate text-[13px] text-muted-foreground">
-            {t.categoryName ?? 'Uncategorized'}
-            {showDate && <> · {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: tz })}</>}
-            {t.hasTime && <> · {formatTime(t.date, tz)}</>}
-            <> · {PAYMENT_METHOD_LABELS[t.paymentMethod]}</>
-            {t.status !== 'completed' && <> · {t.status}</>}
-          </span>
+          {order?.items.length ? (
+            // an order: the dishes as chips, then when
+            <span className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
+              <DishChips items={order.items} max={1} />
+              <span className="shrink-0">
+                {showDate && <>{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: tz })}{t.hasTime && ' · '}</>}
+                {t.hasTime && formatTime(t.date, tz)}
+                {t.status !== 'completed' && <> · {t.status}</>}
+              </span>
+            </span>
+          ) : (
+            <span className="block truncate text-[13px] text-muted-foreground">
+              {t.categoryName ?? 'Uncategorized'}
+              {showDate && <> · {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: tz })}</>}
+              {t.hasTime && <> · {formatTime(t.date, tz)}</>}
+              {paidWithOf(t) && <> · {paidWithOf(t)}</>}
+              {t.status !== 'completed' && <> · {t.status}</>}
+            </span>
+          )}
         </span>
         <TxnAmount t={t} />
       </button>

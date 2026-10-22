@@ -81,7 +81,7 @@ function UploadCard() {
         <span className="grid size-16 place-items-center rounded-full bg-muted"><Upload className="size-7" strokeWidth={1.75} aria-hidden /></span>
         <div>
           <h2 className="type-headline text-[24px] leading-tight">{over ? 'Drop it here' : 'Bring in a statement'}</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">CSV, Excel, text-based PDF statements, receipt emails (.eml) or receipt photos. You will see every row and decide what is saved.</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">CSV, Excel, text-based PDF statements, receipt emails (.eml), receipt photos, or a screenshot of an app’s order history (with AI receipt reading on, every order on it is read). You will see every row and decide what is saved.</p>
         </div>
         <input ref={input} type="file" accept={ACCEPT} className="sr-only" aria-label="Choose a file to import" onChange={(e) => pick(e.target.files?.[0])} tabIndex={-1} />
         <div className="flex w-full flex-wrap items-center justify-center gap-3">

@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, CircleHelp, Copy, Download, Plus, Repeat, Search, Tag, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, CircleHelp, Copy, Download, Plus, Repeat, Search, Tag, Trash2, X, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DuplicateGroupDto, PageMeta, PeriodTotals, TransactionDto } from '@spendly/shared';
-import { PAYMENT_METHOD_LABELS } from '@spendly/shared';
 import { CategoryIcon, seriesVar } from '@/components/common/category-icon';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { FilterBar } from '@/components/common/filter-bar';
@@ -26,6 +25,8 @@ import { useIsDesktop, useMediaQuery } from '@/hooks/use-media-query';
 import { api } from '@/lib/api';
 import { useFilters } from '@/lib/filters';
 import { dayHeading, dayKey, formatDate, formatTime, plural } from '@/lib/format';
+import { paidWithOf } from '@/lib/labels';
+import { DishChips, detailOfTxn } from '@/components/transactions/order-detail';
 import { cn } from '@/lib/utils';
 
 type Result = { items: TransactionDto[]; meta: PageMeta; totals: PeriodTotals };
@@ -164,7 +165,7 @@ export default function Transactions() {
   const pageSize = Number(params.get('pageSize') ?? 25) || 25;
   const sort = (['date', 'amount', 'merchant'].includes(params.get('sort') ?? '') ? params.get('sort') : 'date') as SortKey;
   const order = (params.get('order') === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc';
-  const flags = { needsReview: params.get('needsReview') === 'true' ? 'true' : undefined, duplicates: params.get('duplicates') === 'true' ? 'true' : undefined, recurring: params.get('recurring') === 'true' ? 'true' : undefined };
+  const flags = { needsReview: params.get('needsReview') === 'true' ? 'true' : undefined, duplicates: params.get('duplicates') === 'true' ? 'true' : undefined, recurring: params.get('recurring') === 'true' ? 'true' : undefined, linked: params.get('linked') === 'true' ? 'true' : undefined };
   const q = params.get('q') ?? '';
 
   // the PWA shortcut "Add a transaction" opens the panel once
@@ -189,6 +190,8 @@ export default function Transactions() {
   };
   const onSort = (k: SortKey) => set({ sort: k, order: sort === k ? (order === 'asc' ? 'desc' : 'asc') : k === 'merchant' ? 'asc' : 'desc' });
   const items = useMemo(() => data.data?.items ?? [], [data.data]);
+  // a column of dashes says nothing: "Paid with" only appears when some row on screen says how it was paid
+  const showPaid = items.some((t) => paidWithOf(t));
   const meta = data.data?.meta;
   const totals = data.data?.totals;
   const allSelected = items.length > 0 && items.every((t) => selected.has(t.id));
@@ -208,7 +211,7 @@ export default function Transactions() {
   }, [items, tz]);
 
   const exportCsv = () => api.download('/transactions/export', { ...rangeParams, ...Object.fromEntries(Object.entries(apiParams).filter(([k]) => ['category', 'platform', 'paymentMethod', 'type'].includes(k))) } as never, 'spendly-transactions.csv').catch((e) => toast.error(e instanceof Error ? e.message : 'Export failed'));
-  const toggleFlag = (key: 'needsReview' | 'duplicates' | 'recurring') => set({ [key]: flags[key] ? null : 'true' });
+  const toggleFlag = (key: 'needsReview' | 'duplicates' | 'recurring' | 'linked') => set({ [key]: flags[key] ? null : 'true' });
 
   return (
     <div className="space-y-5">
@@ -256,7 +259,7 @@ export default function Transactions() {
           </p>
         )}
         <div className="scrollbar-none relative -mx-3 flex snap-x gap-2 overflow-x-auto scroll-px-3 px-3 py-1 *:shrink-0 *:snap-start md:mx-0 md:flex-wrap md:overflow-visible md:p-0" role="group" aria-label="Quick views">
-          {([['needsReview', 'Needs review', CircleHelp], ['duplicates', 'Possible duplicates', Copy], ['recurring', 'Recurring', Repeat]] as const).map(([k, label, Icon]) => (
+          {([['needsReview', 'Needs review', CircleHelp], ['duplicates', 'Possible duplicates', Copy], ['recurring', 'Recurring', Repeat], ['linked', 'From linked accounts', Link2]] as const).map(([k, label, Icon]) => (
             <Button key={k} size="sm" variant={flags[k] ? 'default' : 'outline'} aria-pressed={Boolean(flags[k])} onClick={() => toggleFlag(k)} className="h-9"><Icon /> {label}</Button>
           ))}
           <Button size="sm" variant="ghost" className="h-9" onClick={() => setDupes(true)}>Resolve duplicates…</Button>
@@ -280,7 +283,7 @@ export default function Transactions() {
                     <TableHead className="w-10 pl-5"><label className="-m-2 grid w-max cursor-pointer place-items-center p-2"><input type="checkbox" aria-label="Select all on this page" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(items.map((t) => t.id)) : new Set())} className="size-4 accent-[var(--series-1)]" /></label></TableHead>
                     <SortHead label="Merchant" k="merchant" sort={sort} order={order} onSort={onSort} />
                     <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase @3xl:table-cell">Category</TableHead>
-                    <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase @3xl:table-cell">Paid with</TableHead>
+                    {showPaid && <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase @3xl:table-cell">Paid with</TableHead>}
                     <SortHead label="Date" k="date" sort={sort} order={order} onSort={onSort} />
                     <SortHead label="Amount" k="amount" sort={sort} order={order} onSort={onSort} className="pr-5 text-right [&>button]:ml-auto" />
                   </TableRow>
@@ -297,19 +300,23 @@ export default function Transactions() {
                             {platform ? <PlatformLogo platform={platform} size={38} /> : <CategoryIcon icon={category?.icon} color={seriesVar(category?.slot)} size={38} />}
                             <div className="min-w-0">
                               <button type="button" onClick={(e) => { e.stopPropagation(); openView(t.id); }} className="flex items-center gap-1.5 text-left text-sm font-medium outline-none hover:underline focus-visible:underline">
-                                <span className="max-w-[16rem] truncate">{t.merchantName}</span>
+                                <span className="max-w-[20rem] truncate">{detailOfTxn(t)?.place ?? t.merchantName}</span>
                                 {t.classification.needsReview && <><CircleHelp className="size-3.5 text-[var(--status-warning)]" aria-hidden /><span className="sr-only">Needs review</span></>}
                                 {t.duplicateStatus === 'possible' && <><Copy className="size-3.5 text-[var(--status-serious)]" aria-hidden /><span className="sr-only">Possible duplicate</span></>}
                                 {t.recurringPaymentId && <><Repeat className="size-3.5 opacity-50" aria-hidden /><span className="sr-only">Recurring</span></>}
                               </button>
-                              {t.platformName && t.platformName !== t.merchantName && <p className="truncate text-xs text-muted-foreground">{t.platformName}</p>}
+                              {detailOfTxn(t)?.items.length ? <DishChips items={detailOfTxn(t)?.items ?? []} max={2} className="mt-1 max-w-[26rem]" /> : t.platformName && t.platformName !== t.merchantName ? <p className="truncate text-xs text-muted-foreground">{t.platformName}</p> : null}
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden text-sm @3xl:table-cell">{t.categoryName ?? <span className="text-muted-foreground">Uncategorized</span>}</TableCell>
-                        <TableCell className="hidden text-sm text-muted-foreground @3xl:table-cell">{PAYMENT_METHOD_LABELS[t.paymentMethod]}</TableCell>
+                        <TableCell className="hidden text-sm @3xl:table-cell">
+                          {t.categoryName ?? <span className="text-muted-foreground">Uncategorized</span>}
+                          {t.importSource === 'integration' && t.platformName && <span className="block text-xs text-muted-foreground">via {t.platformName}</span>}
+                        </TableCell>
+                        {showPaid && <TableCell className="hidden text-sm text-muted-foreground @3xl:table-cell">{paidWithOf(t) ?? '—'}</TableCell>}
                         <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
                           {formatDate(t.date, tz, 'long')}
+                          {t.hasTime && <span className="block text-xs">{formatTime(t.date, tz)}</span>}
                           {t.status !== 'completed' && <Badge variant="warn" className="ml-2">{t.status}</Badge>}
                           {t.type === 'transfer' && <Badge className="ml-2">Transfer</Badge>}
                         </TableCell>

@@ -2,6 +2,8 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+import { normalizePhone } from '@spendly/shared';
+import { decodeBase32 } from '../lib/totp';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -75,6 +77,9 @@ const schema = z.object({
   TWILIO_MESSAGING_SERVICE_SID: z.string().optional(),
   SMS_WEBHOOK_URL: z.string().optional(),
   SMS_WEBHOOK_SECRET: z.string().optional(),
+  // sign-in with a code from an authenticator app instead of a text: for the people named in OWNER_PHONES only
+  OWNER_PHONES: z.string().optional(),
+  OWNER_TOTP_SECRET: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -121,6 +126,23 @@ if (smsProvider === 'webhook') {
   if (isProd && !raw.SMS_WEBHOOK_URL.startsWith('https://')) throw new Error('SMS_WEBHOOK_URL must use https:// in production.');
 }
 
+// OWNER_TOTP_SECRET + OWNER_PHONES let the owners of a server with no SMS provider sign in with an authenticator app
+let ownerPhones: string[] = [];
+let ownerTotpKey: Buffer | null = null;
+if (raw.OWNER_TOTP_SECRET || raw.OWNER_PHONES) {
+  if (!raw.OWNER_TOTP_SECRET || !raw.OWNER_PHONES) throw new Error('OWNER_PHONES and OWNER_TOTP_SECRET must be set together.');
+  ownerTotpKey = decodeBase32(raw.OWNER_TOTP_SECRET);
+  if (!ownerTotpKey || ownerTotpKey.length < 10) throw new Error('OWNER_TOTP_SECRET must be a base32 secret of at least 16 characters (make one with apps/api/scripts/owner-totp.ts).');
+  ownerPhones = raw.OWNER_PHONES.split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => {
+      const phone = normalizePhone(p);
+      if (!phone) throw new Error(`OWNER_PHONES has a number that is not a 10-digit Indian mobile number: ${p}`);
+      return phone;
+    });
+}
+
 /** The source tree (apps/api/src/config) and the bundle (apps/api/dist) sit at different depths, so look in each place. */
 function findWebDist(): string {
   const candidates = [
@@ -135,6 +157,8 @@ function findWebDist(): string {
 export const env = {
   ...raw,
   SMS_PROVIDER: smsProvider,
+  ownerPhones,
+  ownerTotpKey,
   aiExtraBody: parseExtraBody(raw.AI_EXTRA_BODY),
   isProd,
   isTest: raw.NODE_ENV === 'test',

@@ -17,6 +17,7 @@ export * from './demo';
 export * from './phone';
 export * from './tracking';
 export * from './providers';
+export * from './order-detail';
 export * from './schemas';
 export * from './dto';
 export * from './catalog/categories';

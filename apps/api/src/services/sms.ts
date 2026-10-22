@@ -99,8 +99,12 @@ export function getSmsProvider(viaLoopback = false): SmsProvider | null {
   }
 }
 
+/** Whether the owners of this server sign in with an authenticator app (OWNER_TOTP_SECRET) because no SMS provider serves the request. */
+export const usesAuthenticator = (viaLoopback: boolean): boolean => env.ownerTotpKey !== null && getSmsProvider(viaLoopback) === null;
+
 /** What the sign-in screen should tell people about how their code will arrive. */
-export const smsDelivery = (viaLoopback: boolean): 'sms' | 'dev' | 'unavailable' => {
+export const smsDelivery = (viaLoopback: boolean): 'sms' | 'dev' | 'authenticator' | 'unavailable' => {
   const provider = getSmsProvider(viaLoopback);
-  return provider ? (provider.mode === 'dev' ? 'dev' : 'sms') : 'unavailable';
+  if (provider) return provider.mode === 'dev' ? 'dev' : 'sms';
+  return usesAuthenticator(viaLoopback) ? 'authenticator' : 'unavailable';
 };

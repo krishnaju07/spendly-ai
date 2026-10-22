@@ -9,6 +9,7 @@ import {
   TRANSACTION_TYPES,
   type ClassificationSource,
   type ImportSource,
+  type OrderDetail,
   type PaymentMethod,
   type TransactionStatus,
   type TransactionType,
@@ -34,6 +35,8 @@ export interface TransactionDoc {
   tags: string[];
   receipt: { fileId: string; filename: string; mimeType: string; size: number } | null;
   importSource: ImportSource;
+  /** What a linked order was: restaurant, area, dishes. Absent on everything else. */
+  orderDetail: OrderDetail | null;
   externalRef: string | null;
   importJobId: Types.ObjectId | null;
   importRowNumber: number | null;
@@ -82,6 +85,22 @@ const transactionSchema = new Schema<TransactionDoc>(
       default: null,
     },
     importSource: { type: String, enum: [...IMPORT_SOURCES], default: 'manual' },
+    orderDetail: {
+      type: new Schema(
+        {
+          place: { type: String, default: null, maxlength: 160 },
+          area: { type: String, default: null, maxlength: 160 },
+          items: [
+            new Schema(
+              { name: { type: String, required: true, maxlength: 120 }, quantity: { type: Number, default: 1, min: 1, max: 999 }, diet: { type: String, enum: ['veg', 'nonveg', 'egg', null], default: null } },
+              { _id: false },
+            ),
+          ],
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
     externalRef: { type: String, default: null, maxlength: 80 },
     importJobId: { type: Schema.Types.ObjectId, default: null },
     importRowNumber: { type: Number, default: null },

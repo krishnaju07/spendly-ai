@@ -63,6 +63,16 @@ server {
 
 The API sets a strict Content-Security-Policy, HSTS, `frame-ancestors 'none'` and related headers itself. Do not cache `/api/*`, `/sw.js` or `/index.html` at the proxy (the API already sends `no-cache` for the service worker, manifest and HTML).
 
+## Signing in without an SMS provider
+
+Production refuses the development `console` provider, so with no `SMS_PROVIDER` the sign-in screen says texting is not set up. If you are the only person using the server, sign in with an authenticator app instead; nothing is texted and nothing is paid for.
+
+1. On your own machine run `npx tsx apps/api/scripts/owner-totp.ts`. It prints a new secret and a setup link; add the secret to Google Authenticator, 1Password, Authy or similar (*Enter a setup key*, time based).
+2. On the server (Render → Environment) set `OWNER_PHONES` to your mobile number and `OWNER_TOTP_SECRET` to the secret, then redeploy. Both are required together.
+3. On the sign-in screen enter that number and then the code from the app. The first time, Spendly asks for your name and creates the account.
+
+Only the numbers in `OWNER_PHONES` can sign in this way, and the screen answers the same for every number, so it does not reveal which ones they are. A code works for one sign-in only (a second sign-in with the same code within 30 seconds is refused), and the same attempt and request limits apply as to texted codes. If you also configure an SMS provider, texting is used for everyone and `OWNER_*` is ignored.
+
 ## Cloudflare Pages auto-deploy
 
 The web app can sit on Cloudflare Pages with the API on Render (see [render.yaml](../render.yaml)). [`deploy/cloudflare/_worker.js`](../deploy/cloudflare/_worker.js) serves the built app and forwards `/api/*` to the backend, so the browser keeps one origin. [`.github/workflows/deploy-cloudflare.yml`](../.github/workflows/deploy-cloudflare.yml) builds the web app and publishes it on every push to `main`, whatever changed (the backend deploys separately through Render). It also runs from the Actions tab (**Run workflow**).

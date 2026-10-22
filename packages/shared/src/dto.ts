@@ -73,7 +73,8 @@ export interface MeDto {
 
 /** How sign-in codes reach people on this server. `unavailable` means no SMS provider is configured. */
 export interface AuthConfigDto {
-  otp: { delivery: 'sms' | 'dev' | 'unavailable'; length: number; resendSeconds: number; expiresMinutes: number };
+  /** `authenticator`: nothing is texted; the server's owners enter the code from their authenticator app. */
+  otp: { delivery: 'sms' | 'dev' | 'authenticator' | 'unavailable'; length: number; resendSeconds: number; expiresMinutes: number };
 }
 
 export interface OtpRequestResultDto {
@@ -104,6 +105,24 @@ export interface ClassificationDto {
   needsReview: boolean;
 }
 
+import type { OrderDetail } from './order-detail';
+
+/** What a set of transactions adds up to, beyond a total: shown above the list so a month reads at a glance. */
+export interface TransactionInsightsDto {
+  /** Completed purchases counted. */
+  count: number;
+  spentPaise: number;
+  averagePaise: number;
+  biggest: { paise: number; title: string; date: string } | null;
+  /** The restaurant or shop ordered from most often (linked accounts only). */
+  topPlace: { name: string; orders: number; paise: number } | null;
+  topDish: { name: string; times: number } | null;
+  /** Dishes by veg mark; null when no order says. */
+  diet: { veg: number; nonveg: number; egg: number } | null;
+  /** Spend per local day, oldest first. */
+  daily: Array<{ day: string; paise: number }>;
+}
+
 export interface TransactionDto {
   id: string;
   merchantName: string;
@@ -125,6 +144,8 @@ export interface TransactionDto {
   tags: string[];
   receipt: { filename: string; mimeType: string; size: number } | null;
   importSource: ImportSource;
+  /** What the order was (restaurant, area, dishes), when a linked account said; null for everything else. */
+  orderDetail: OrderDetail | null;
   externalRef: string | null;
   importJobId: string | null;
   refundOfId: string | null;

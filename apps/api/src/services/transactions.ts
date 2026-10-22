@@ -7,6 +7,7 @@ import {
   suggestRuleFromMerchant,
   type ClassificationSource,
   type ImportSource,
+  type OrderDetail,
   type PaymentMethod,
   type Recognition,
   type TransactionStatus,
@@ -42,6 +43,7 @@ export interface TransactionDraft {
   externalRef: string | null;
   refundOfId: Types.ObjectId | null;
   importSource: ImportSource;
+  orderDetail?: OrderDetail | null;
   importJobId?: Types.ObjectId | null;
   importRowNumber?: number | null;
   classification: { source: ClassificationSource; confidence: number; reason: string; needsReview: boolean; ruleId: string | null };
@@ -98,6 +100,7 @@ export function toTransactionDoc(auth: Pick<AuthContext, 'userId' | 'tz' | 'user
     tags: d.tags,
     receipt: null,
     importSource: d.importSource,
+    orderDetail: d.orderDetail ?? null,
     externalRef: d.externalRef,
     importJobId: d.importJobId ?? null,
     importRowNumber: d.importRowNumber ?? null,
@@ -186,7 +189,7 @@ export async function createTransaction(
   auth: AuthContext,
   input: CreateInput,
   /** Where the record came from, when it did not come from someone typing it in. */
-  opts: { importSource?: ImportSource } = {},
+  opts: { importSource?: ImportSource; /** What the order was, when a linked account said. */ orderDetail?: OrderDetail | null } = {},
 ): Promise<{ doc: TransactionDoc; warnings: string[] }> {
   const classifier = await createClassifier(auth);
   const lk = classifier.lookups;
@@ -243,6 +246,7 @@ export async function createTransaction(
     externalRef: input.externalRef ?? null,
     refundOfId,
     importSource: opts.importSource ?? 'manual',
+    orderDetail: opts.orderDetail ?? null,
     classification: explicit
       ? { source: 'user', confidence: 1, reason: 'Set by you', needsReview: false, ruleId: null }
       : { ...classificationFrom(rec), needsReview: rec.needsReview || (!category && input.type === 'expense') },

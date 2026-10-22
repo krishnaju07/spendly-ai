@@ -7,7 +7,6 @@ import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import {
-  IMPORT_SOURCE_LABELS,
   PAYMENT_METHODS,
   PAYMENT_METHOD_LABELS,
   TRANSACTION_STATUSES,
@@ -16,6 +15,7 @@ import {
   rupeesToPaise,
   type TransactionDto,
   type TransactionSaveResult,
+  type OrderDetail,
 } from '@spendly/shared';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { Field } from '@/components/common/field';
@@ -38,6 +38,8 @@ import { useInvalidateMoney } from '@/hooks/use-invalidate';
 import { useIsDesktop } from '@/hooks/use-media-query';
 import { ApiRequestError, api, apiUrl } from '@/lib/api';
 import { formatDate, formatTime } from '@/lib/format';
+import { paidWithOf, referenceLabel, sourceLabel } from '@/lib/labels';
+import { OrderCard, detailOfTxn } from './order-detail';
 import { TxnAmount } from './txn-row';
 
 // ── context ────────────────────────────────────────────────────────────────────────────────────
@@ -208,15 +210,17 @@ function TransactionView({ t, onEdit, onClose }: { t: TransactionDto; onEdit: ()
         </div>
       </div>
 
+      {detailOfTxn(t) && <div className="mt-5 px-5 sm:px-7"><OrderCard detail={detailOfTxn(t) as OrderDetail} /></div>}
+
       <dl className="mt-5 grid grid-cols-2 gap-2.5 px-5 sm:px-7">
         <Fact label="Category">
           {t.categoryName ?? 'Uncategorized'}
           {t.subcategory && <span className="text-muted-foreground"> · {t.subcategory}</span>}
         </Fact>
         <Fact label="Platform">{t.platformName ?? 'Other / unassigned'}</Fact>
-        <Fact label="Paid with">{PAYMENT_METHOD_LABELS[t.paymentMethod]}</Fact>
-        <Fact label="Source">{IMPORT_SOURCE_LABELS[t.importSource]}</Fact>
-        {t.externalRef && <Fact label="Reference"><span className="tnum break-all">{t.externalRef}</span></Fact>}
+        <Fact label="Paid with">{paidWithOf(t) ?? <span className="text-muted-foreground">Not shown by the app</span>}</Fact>
+        <Fact label="Source">{sourceLabel(t)}</Fact>
+        {t.externalRef && <Fact label="Reference"><span className="tnum break-all">{referenceLabel(t)}</span></Fact>}
         {t.tags.length > 0 && (
           <Fact label="Tags">
             <span className="flex flex-wrap gap-1">
@@ -226,7 +230,7 @@ function TransactionView({ t, onEdit, onClose }: { t: TransactionDto; onEdit: ()
             </span>
           </Fact>
         )}
-        {t.description && <div className="col-span-2"><Fact label="Description"><span className="break-words">{t.description}</span></Fact></div>}
+        {t.description && !detailOfTxn(t) && <div className="col-span-2"><Fact label="Description"><span className="break-words">{t.description}</span></Fact></div>}
         {t.notes && <div className="col-span-2"><Fact label="Notes"><span className="break-words whitespace-pre-wrap">{t.notes}</span></Fact></div>}
       </dl>
 

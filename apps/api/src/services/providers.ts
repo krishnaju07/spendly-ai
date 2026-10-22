@@ -91,7 +91,7 @@ const DEFS: Record<ProviderId, ProviderDef> = {
     name: 'Zomato',
     access: 'available',
     note: 'You sign in with your phone number on Zomato’s own page (it opens in a small window and closes by itself). Spendly asks for Zomato’s permission and only reads your order history.',
-    limits: 'Zomato opens its sign-in to personal-use apps, but only from return addresses it has approved: ask Zomato to approve yours first (the steps are under “Other apps → Zomato”). Until it does, linking stops with a message from Zomato. Once linked, the first sync shows what Zomato sent and waits for you to confirm before anything is saved.',
+    limits: 'Zomato shares your order history, newest first: the first sync reads up to your latest 200 orders, then each sync adds what is new. Zomato says its sign-in is for personal-use apps and only from return addresses it has approved: Spendly on your own computer signed in fine when tried; if Zomato refuses yours, the steps to ask it are under “Other apps → Zomato”. The first sync shows what Zomato sent and waits for you to confirm before anything is saved.',
     platforms: ['zomato'],
     review: true,
     tokenFormat: 'form',
@@ -99,7 +99,7 @@ const DEFS: Record<ProviderId, ProviderDef> = {
       const ep = await discover(ZOMATO_BASE, { authorization: `${ZOMATO_BASE}/authorize`, token: `${ZOMATO_BASE}/token`, registration: `${ZOMATO_BASE}/register` });
       return { authorization: ep.authorization, token: ep.token, clientId: await register(ep.registration, redirectUri, 'Zomato'), scope: 'mcp:tools' };
     },
-    read: ({ token }) => readZomatoOrders(token, ZOMATO_BASE),
+    read: ({ token, stored }) => readZomatoOrders(token, ZOMATO_BASE, stored),
   },
 };
 
@@ -234,7 +234,9 @@ export async function syncProvider(auth: AuthContext, id: ProviderId, opts: { pr
 
   syncing.add(key);
   try {
-    const stored = new Set((await Transaction.find({ userId: auth.userId, importSource: 'integration' }).select('externalRef').lean()).map((t) => t.externalRef).filter((r): r is string => Boolean(r)));
+    // orders saved with their details: a reader skips these (and stops paging at a page made only of them). Ones saved before details
+    // were kept are read again so they can be filled in.
+    const stored = new Set((await Transaction.find({ userId: auth.userId, importSource: 'integration', orderDetail: { $ne: null } }).select('externalRef').lean()).map((t) => t.externalRef).filter((r): r is string => Boolean(r)));
     let read;
     try {
       read = await def.read({ token: await accessTokenFor(conn, def), tracked, stored });
@@ -260,12 +262,15 @@ export async function syncProvider(auth: AuthContext, id: ProviderId, opts: { pr
     let updated = 0;
     let skipped = 0;
     for (const o of read.orders) {
-      const existing = await Transaction.findOne({ userId: auth.userId, externalRef: o.ref }).select('status').lean();
+      const existing = await Transaction.findOne({ userId: auth.userId, externalRef: o.ref }).select('status orderDetail').lean();
       const status = o.status === 'cancelled' ? 'failed' : o.status;
       if (existing) {
-        // an order read while on its way is completed (or cancelled) the next time round
-        if (existing.status !== status && existing.status === 'pending') {
-          await Transaction.updateOne({ _id: existing._id }, { $set: { status } });
+        // an order read while on its way is completed (or cancelled) the next time round; one saved before details were kept gets them now
+        const set: Record<string, unknown> = {};
+        if (existing.status !== status && existing.status === 'pending') set.status = status;
+        if (!existing.orderDetail && o.detail) set.orderDetail = o.detail;
+        if (Object.keys(set).length) {
+          await Transaction.updateOne({ _id: existing._id }, { $set: set });
           updated++;
         } else skipped++;
         continue;
@@ -277,7 +282,7 @@ export async function syncProvider(auth: AuthContext, id: ProviderId, opts: { pr
       await createTransaction(
         auth,
         { merchantName: o.merchantName, amountPaise: o.amountPaise, date: o.date.toISOString(), hasTime: true, type: 'expense', status, paymentMethod: 'other', description: o.description, notes: '', tags: [], externalRef: o.ref },
-        { importSource: 'integration' },
+        { importSource: 'integration', orderDetail: o.detail ?? null },
       );
       added++;
     }

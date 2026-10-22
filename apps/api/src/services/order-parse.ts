@@ -1,4 +1,4 @@
-import { rupeesToPaise } from '@spendly/shared';
+import { describeDetail, parseItems, rupeesToPaise, type OrderDetail } from '@spendly/shared';
 
 /**
  * Reading an order list the way each service writes it. The shapes are defensive on purpose: they were taught by looking
@@ -13,7 +13,10 @@ export interface ProviderOrder {
   amountPaise: number;
   date: Date;
   status: 'completed' | 'pending' | 'cancelled';
+  /** One line, for search and for anywhere without room for chips. */
   description: string;
+  /** The restaurant, area and dishes, as data. */
+  detail?: OrderDetail;
 }
 
 type Obj = Record<string, unknown>;
@@ -58,16 +61,19 @@ const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', '
 export function parseIndianLocal(text: string, now = Date.now()): Date | null {
   const label = /^([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:,?\s+(\d{4}))?,?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?$/.exec(text.trim());
   const iso = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(text.trim());
+  const dayFirst = /^(\d{1,2})\s+([A-Za-z]{3,9})\.?,?(?:\s+(\d{4}))?,?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AaPp][Mm])?$/.exec(text.trim());
   let year: number | null, month: number, day: number, hour: number, minute: number, second: number;
-  if (label) {
-    month = MONTHS.indexOf((label[1] as string).slice(0, 3).toLowerCase());
+  if (label || dayFirst) {
+    // "October 8, 12:30 PM" (Swiggy) or "08 Oct, 12:30pm" (Zomato)
+    const m = (label ?? dayFirst) as RegExpExecArray;
+    month = MONTHS.indexOf((m[label ? 1 : 2] as string).slice(0, 3).toLowerCase());
     if (month < 0) return null;
-    year = label[3] ? Number(label[3]) : null;
-    day = Number(label[2]);
-    hour = Number(label[4]);
-    minute = Number(label[5]);
-    second = Number(label[6] ?? 0);
-    const meridiem = label[7]?.toLowerCase();
+    year = m[3] ? Number(m[3]) : null;
+    day = Number(m[label ? 2 : 1]);
+    hour = Number(m[4]);
+    minute = Number(m[5]);
+    second = Number(m[6] ?? 0);
+    const meridiem = m[7]?.toLowerCase();
     if (meridiem) {
       if (hour < 1 || hour > 12) return null;
       hour = (hour % 12) + (meridiem === 'pm' ? 12 : 0);
@@ -94,7 +100,7 @@ export function parseIndianLocal(text: string, now = Date.now()): Date | null {
  */
 export function looseDateToIso(text: string, now = Date.now(), notAfter: string | null = null): string | null {
   const t = text.trim();
-  let day: number, month: number, year: number | null = null;
+  let day: number, month: number, year: number | null;
   let m: RegExpExecArray | null;
   if ((m = /^(\d{4})-(\d{2})-(\d{2})/.exec(t))) [year, month, day] = [Number(m[1]), Number(m[2]) - 1, Number(m[3])];
   else if ((m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})\b/.exec(t))) [day, month, year] = [Number(m[1]), Number(m[2]) - 1, Number(m[3]) < 100 ? 2000 + Number(m[3]) : Number(m[3])];
@@ -137,26 +143,9 @@ export function toPaise(v: unknown): number | null {
 
 export function statusOf(v: unknown): ProviderOrder['status'] {
   const s = String(v ?? '').toLowerCase();
-  if (/cancel|reject|fail/.test(s)) return 'cancelled';
+  if (/cancel|reject|fail|refund/.test(s)) return 'cancelled';
   if (/deliver|complete|done|success/.test(s)) return 'completed';
   return 'pending';
-}
-
-function describeItems(items: unknown): string {
-  // Food sends the items as one comma-separated sentence
-  if (typeof items === 'string') return items.trim().slice(0, 240);
-  if (!Array.isArray(items)) return '';
-  const names = items
-    .map((i) => {
-      if (typeof i === 'string') return i;
-      if (!isObj(i)) return '';
-      const name = pick(i, 'name', 'itemName', 'item_name', 'title', 'productName');
-      const qty = Number(pick(i, 'quantity', 'qty', 'count'));
-      return typeof name === 'string' ? (qty > 1 ? `${name} ×${qty}` : name) : '';
-    })
-    .filter(Boolean);
-  if (!names.length) return '';
-  return names.length > 4 ? `${names.slice(0, 4).join(', ')} +${names.length - 4} more` : names.join(', ');
 }
 
 const idOf = (o: Obj): string | null => {
@@ -185,8 +174,8 @@ export function parseOrders(raw: unknown[], kind: OrderSource, now = Date.now())
     }
     const id = idOf(item);
     const bill = isObj(item.billDetails) ? item.billDetails : {};
-    const amount = toPaise(pick(item, 'orderTotal', 'totalAmount', 'total', 'grandTotal', 'orderAmount', 'amount', 'totalPrice') ?? pick(bill, 'grandTotal', 'total', 'toPay'));
-    const when = pick(item, 'orderedTime', 'orderTime', 'placedAt', 'orderedAt', 'createdAt', 'orderDate', 'ordered_at', 'placed_at', 'date');
+    const amount = toPaise(pick(item, 'orderTotal', 'totalAmount', 'total', 'grandTotal', 'orderAmount', 'amount', 'totalPrice', 'payment_amount') ?? pick(bill, 'grandTotal', 'total', 'toPay'));
+    const when = pick(item, 'orderedTime', 'orderTime', 'placedAt', 'orderedAt', 'createdAt', 'orderDate', 'ordered_at', 'placed_at', 'payment_date', 'date');
     let date = toDate(when, now);
     // orders come newest first and a time like "June 12, 7:45 PM" has no year: if the guess makes an order newer than
     // the one before it, it belongs to an earlier year (someone who orders rarely can have five orders over two years)
@@ -206,17 +195,23 @@ export function parseOrders(raw: unknown[], kind: OrderSource, now = Date.now())
       continue;
     }
     previous = date;
-    const restaurant = pick(item, 'restaurantName', 'restaurant_name') ?? (isObj(item.restaurant) ? item.restaurant.name : undefined);
-    const items = describeItems(pick(item, 'orderedItems', 'items', 'products', 'lineItems'));
-    const description = [typeof restaurant === 'string' ? restaurant : '', items].filter(Boolean).join(' · ').slice(0, 480) || src.fallback;
+    const restaurant = pick(item, 'restaurantName', 'restaurant_name', 'res_name') ?? (isObj(item.restaurant) ? item.restaurant.name : undefined);
+    const area = pick(item, 'res_address', 'restaurantAreaName', 'restaurant_area', 'area');
+    const detail: OrderDetail = {
+      place: typeof restaurant === 'string' && restaurant.trim() ? restaurant.trim().slice(0, 160) : null,
+      area: typeof area === 'string' && area.trim() ? area.trim().slice(0, 160) : null,
+      items: parseItems(pick(item, 'orderedItems', 'items', 'products', 'lineItems', 'catalogue_items')),
+    };
+    const description = describeDetail(detail, src.fallback);
     orders.push({
       ref: `${src.prefix}:${id}`.slice(0, 80),
       platform: src.platform,
       merchantName: src.name,
       amountPaise: amount,
       date,
-      status: statusOf(pick(item, 'orderStatus', 'status', 'state')),
+      status: statusOf(pick(item, 'orderStatus', 'status', 'state', 'payment_status')),
       description,
+      detail,
     });
   }
   return { orders, unreadable, missing: [...missing] };

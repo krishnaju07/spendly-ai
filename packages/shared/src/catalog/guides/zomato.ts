@@ -2,18 +2,17 @@ import type { AppGuide } from '../app-guide';
 
 export const GUIDE_ZOMATO: AppGuide = {
   slug: 'zomato',
-  status: 'Linkable once Zomato approves your return address (personal use); receipts work now',
+  status: 'Link it with a sign-in on Zomato’s page; receipts work too',
   ways: [
     {
-      title: 'Link Zomato (needs Zomato’s approval first)',
+      title: 'Link Zomato',
       accepts: 'Nothing to upload',
       importKind: 'auto',
       steps: [
-        'Open the access form in Zomato’s public MCP page on GitHub (github.com/Zomato/mcp-server-manifest, the link under “request access”).',
-        'Say it is for personal use: your own Spendly on your own computer, to read your own order history.',
-        'Ask Zomato to allow the return address shown under “Link your accounts” (use the Copy button).',
-        'When Zomato approves, tick Zomato in your tracked apps and click “Link Zomato”.',
-        'Sign in on Zomato’s page in the small window, then click “Sync now” and check what it found.',
+        'Tick Zomato in your tracked apps, then click “Link Zomato” under “Link your accounts”.',
+        'Sign in on Zomato’s own page in the small window.',
+        'Click “Sync now” and check the orders Zomato sent before you add them.',
+        'If Zomato refuses the sign-in, ask it to allow your return address (shown under “Link your accounts”, with a Copy button): use the access form linked from Zomato’s public MCP page on GitHub (github.com/Zomato/mcp-server-manifest), and say it is for personal use, on your own computer.',
       ],
     },
     {
@@ -40,8 +39,8 @@ export const GUIDE_ZOMATO: AppGuide = {
     },
   ],
   unverified: [
-    'Zomato’s README says access is reviewed by Zomato and for personal use only, and that it currently allows only a short list of return addresses. How long a review takes is not stated.',
-    'Zomato’s order-history tool is named in its public tool catalogue, but what it returns has not been seen on a real account, so the first sync asks you to confirm what it found.',
+    'Zomato’s README says access is for personal use only and that it allows only approved return addresses. Spendly on a computer at localhost signed in on a real account; a Spendly on a public address may need Zomato’s approval, and how long a review takes is not stated.',
+    'Zomato prints no year on its order dates, so Spendly works the year out from the order of the list: check the dates on older orders.',
     'Zomato’s order emails and invoices were not checked: we do not know their sender, subject or layout.',
     'Zomato’s privacy policy gives no download right and no turnaround time, and the new data-access right in India’s DPDP law cannot be enforced until about May 2027.',
   ],

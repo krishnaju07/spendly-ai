@@ -8,6 +8,7 @@ import {
   type PatternsDto,
   type PeriodTotals,
   type PlatformStatDto,
+  type TransactionInsightsDto,
   type TrendPointDto,
   type MerchantStatDto,
 } from '@spendly/shared';
@@ -376,6 +377,54 @@ export async function totalsForMatch(match: Record<string, unknown>): Promise<Pe
     { $group: { _id: null, ...TOTALS } },
   ]);
   return row ? withNet(row) : emptyTotals();
+}
+
+/** Beyond the total: per-day spend, the biggest purchase, and — for orders from linked accounts — favourite place, dish and veg split. */
+export async function transactionInsights(match: Record<string, unknown>, tz: string): Promise<TransactionInsightsDto> {
+  const spend = { ...match, status: 'completed', type: 'expense' };
+  const [row] = await Transaction.aggregate<{
+    overall: Array<{ count: number; spent: number }>;
+    biggest: Array<{ amountPaise: number; merchantName: string; place: string | null; date: Date }>;
+    places: Array<{ _id: string; orders: number; paise: number }>;
+    dishes: Array<{ _id: string; times: number }>;
+    diet: Array<{ _id: string | null; n: number }>;
+    daily: Array<{ _id: string; paise: number }>;
+  }>([
+    { $match: spend },
+    {
+      $facet: {
+        overall: [{ $group: { _id: null, count: { $sum: 1 }, spent: { $sum: '$amountPaise' } } }],
+        biggest: [{ $sort: { amountPaise: -1 } }, { $limit: 1 }, { $project: { amountPaise: 1, merchantName: 1, place: '$orderDetail.place', date: 1 } }],
+        places: [
+          { $match: { 'orderDetail.place': { $type: 'string' } } },
+          { $group: { _id: '$orderDetail.place', orders: { $sum: 1 }, paise: { $sum: '$amountPaise' } } },
+          { $sort: { orders: -1, paise: -1 } },
+          { $limit: 1 },
+        ],
+        dishes: [{ $unwind: '$orderDetail.items' }, { $group: { _id: '$orderDetail.items.name', times: { $sum: '$orderDetail.items.quantity' } } }, { $sort: { times: -1 } }, { $limit: 1 }],
+        diet: [{ $unwind: '$orderDetail.items' }, { $group: { _id: '$orderDetail.items.diet', n: { $sum: '$orderDetail.items.quantity' } } }],
+        daily: [{ $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$date', timezone: tz } }, paise: { $sum: '$amountPaise' } } }, { $sort: { _id: 1 } }, { $limit: 400 }],
+      },
+    },
+  ]);
+  const overall = row?.overall[0];
+  const count = overall?.count ?? 0;
+  const spentPaise = overall?.spent ?? 0;
+  const big = row?.biggest[0];
+  const place = row?.places[0];
+  const dish = row?.dishes[0];
+  const dietCounts = { veg: 0, nonveg: 0, egg: 0 };
+  for (const d of row?.diet ?? []) if (d._id === 'veg' || d._id === 'nonveg' || d._id === 'egg') dietCounts[d._id] = d.n;
+  return {
+    count,
+    spentPaise,
+    averagePaise: count ? Math.round(spentPaise / count) : 0,
+    biggest: big ? { paise: big.amountPaise, title: big.place ?? big.merchantName, date: big.date.toISOString() } : null,
+    topPlace: place ? { name: place._id, orders: place.orders, paise: place.paise } : null,
+    topDish: dish ? { name: dish._id, times: dish.times } : null,
+    diet: dietCounts.veg + dietCounts.nonveg + dietCounts.egg > 0 ? dietCounts : null,
+    daily: (row?.daily ?? []).map((d) => ({ day: d._id, paise: d.paise })),
+  };
 }
 
 export interface GroupedTrend {

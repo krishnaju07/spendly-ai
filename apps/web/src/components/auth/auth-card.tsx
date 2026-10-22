@@ -261,10 +261,17 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
     }
   };
 
+  // nothing is texted: the owner types the code from an authenticator app
+  const byApp = delivery === 'authenticator';
+
   const title = step === 'track' ? 'Choose what to track' : step === 'code' ? 'Enter your code' : step === 'name' ? 'Nice to meet you' : isRegister ? 'Create your workspace' : 'Welcome back';
   const subtitle =
     step === 'track' ? (
       'Spendly only looks for spending from the apps you allow here.'
+    ) : step === 'code' && byApp ? (
+      <>
+        Open your authenticator app and enter the {OTP_LENGTH}-digit code for <b className="tnum font-semibold text-foreground">{sent ? maskPhone(sent.phone) : ''}</b>.
+      </>
     ) : step === 'code' ? (
       <>
         We sent a {OTP_LENGTH}-digit code to <b className="tnum font-semibold text-foreground">{sent ? maskPhone(sent.phone) : ''}</b>.
@@ -278,11 +285,16 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
     );
 
   const cta = {
-    phone: { idle: isRegister ? 'Continue' : 'Send code', busy: 'Sending code…' },
-    track: { idle: 'Allow and send code', busy: 'Sending code…' },
+    phone: { idle: isRegister || byApp ? 'Continue' : 'Send code', busy: byApp ? 'One moment…' : 'Sending code…' },
+    track: { idle: byApp ? 'Allow and continue' : 'Allow and send code', busy: byApp ? 'One moment…' : 'Sending code…' },
     code: { idle: 'Verify and continue', busy: 'Checking…' },
     name: { idle: 'Create account', busy: 'Creating your workspace…' },
   }[step];
+  const phoneHint = byApp
+    ? isRegister
+      ? 'Next you choose which apps to track, then enter the code from your authenticator app.'
+      : 'You will enter the code from your authenticator app.'
+    : `${isRegister ? 'Next you choose which apps to track, then we text you a one-time code.' : 'We will text you a one-time code.'} Standard SMS rates from your operator may apply.`;
   const ctaBody =
     ctaState === 'done' ? (
       <>
@@ -392,6 +404,14 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
                 </span>
               </div>
             )}
+            {byApp && (
+              <div className="note mt-3" data-tone="dev">
+                <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden />
+                <span>
+                  <b>No text message is sent.</b> Enter the number set up for this server, then the code from your authenticator app.
+                </span>
+              </div>
+            )}
             {delivery === 'unavailable' && (
               <div className="note mt-3" data-tone="off" role="status">
                 <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -402,7 +422,7 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
             <button type="submit" className="cta mt-5" data-state={ctaState} disabled={locked || delivery === 'unavailable'}>
               {ctaBody}
             </button>
-            <p className="mt-3 px-1 text-xs leading-relaxed text-muted-foreground">{isRegister ? 'Next you choose which apps to track, then we text you a one-time code.' : 'We will text you a one-time code.'} Standard SMS rates from your operator may apply.</p>
+            <p className="mt-3 px-1 text-xs leading-relaxed text-muted-foreground">{phoneHint}</p>
           </form>
         )}
 
@@ -428,7 +448,7 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
               {ctaBody}
             </button>
             <p className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1 text-[13px] text-muted-foreground">
-              <span>{tracked.length ? 'The code we text confirms this choice.' : 'Pick at least one app to allow.'}</span>
+              <span>{tracked.length ? (byApp ? 'The code from your app confirms this choice.' : 'The code we text confirms this choice.') : 'Pick at least one app to allow.'}</span>
               <button type="button" className="link" disabled={locked} onClick={() => {
                   setTracked([]);
                   void sendCode(null);
@@ -486,14 +506,14 @@ export function AuthCard({ mode, onMode, busy, welcome, delivery, onRequestCode,
               {ctaBody}
             </button>
             <p className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
-              <span>Did not get it?</span>
+              <span>{byApp ? 'Code not accepted?' : 'Did not get it?'}</span>
               {left > 0 ? (
                 <span className="tnum" aria-live="off">
-                  Send a new code in {clock(left)}
+                  {byApp ? 'Start over' : 'Send a new code'} in {clock(left)}
                 </span>
               ) : (
                 <button type="button" className="link" onClick={() => void resend()} disabled={sending || busy !== null}>
-                  {sending ? 'Sending…' : 'Send a new code'}
+                  {sending ? (byApp ? 'One moment…' : 'Sending…') : byApp ? 'Start over' : 'Send a new code'}
                 </button>
               )}
             </p>

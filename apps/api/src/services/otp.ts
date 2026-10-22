@@ -5,7 +5,8 @@ import { env } from '../config/env';
 import { otpDigest, safeEqual } from '../lib/crypto';
 import { AppError, unavailable } from '../lib/errors';
 import { OtpChallenge } from '../models/account';
-import { getSmsProvider } from './sms';
+import { matchTotp } from '../lib/totp';
+import { getSmsProvider, usesAuthenticator } from './sms';
 
 const HOUR_MS = 3_600_000;
 /** How long a correct code stays usable while someone with a brand-new number types their name. */
@@ -19,8 +20,9 @@ const expired = () => new AppError(400, 'CODE_EXPIRED', 'That code has expired. 
  * number stop it being used to flood someone's phone.
  */
 export async function requestCode(phone: string, viaLoopback: boolean): Promise<OtpRequestResultDto> {
+  const authenticator = usesAuthenticator(viaLoopback);
   const provider = getSmsProvider(viaLoopback);
-  if (!provider) throw unavailable('Sign-in codes by SMS are not set up on this server yet.', 'SMS_NOT_CONFIGURED');
+  if (!provider && !authenticator) throw unavailable('Sign-in codes by SMS are not set up on this server yet.', 'SMS_NOT_CONFIGURED');
   const now = Date.now();
 
   const latest = await OtpChallenge.findOne({ phone }).sort({ createdAt: -1 }).select('createdAt').lean();
@@ -36,9 +38,12 @@ export async function requestCode(phone: string, viaLoopback: boolean): Promise<
   }
 
   const code = String(randomInt(0, 10 ** OTP_LENGTH)).padStart(OTP_LENGTH, '0');
-  const challenge = await OtpChallenge.create({ phone, codeHash: otpDigest(phone, code), expiresAt: new Date(now + env.OTP_TTL_MINUTES * 60_000) });
+  // Nothing is sent. The answer is the same for every number (so this cannot reveal who the owners are), and only an
+  // owner's challenge is checked against the authenticator; anyone else's holds a random code nobody has seen.
+  const method = authenticator && env.ownerPhones.includes(phone) ? 'authenticator' : 'sms';
+  const challenge = await OtpChallenge.create({ phone, codeHash: otpDigest(phone, code), method, expiresAt: new Date(now + env.OTP_TTL_MINUTES * 60_000) });
   try {
-    await provider.send(phone, code);
+    if (provider) await provider.send(phone, code);
   } catch (error) {
     // a code that never went out should not count against the number's cap or delay the next try
     await OtpChallenge.deleteOne({ _id: challenge._id });
@@ -49,8 +54,22 @@ export async function requestCode(phone: string, viaLoopback: boolean): Promise<
   return {
     resendInSeconds: env.OTP_RESEND_SECONDS,
     expiresInSeconds: env.OTP_TTL_MINUTES * 60,
-    ...(provider.mode === 'dev' ? { devCode: code } : {}),
+    ...(provider?.mode === 'dev' ? { devCode: code } : {}),
   };
+}
+
+/**
+ * Whether `otp` is right for this challenge: the texted code's hash, or for an owner the app's current code.
+ * An app code is good for one sign-in only: if another challenge for this number already signed in with the
+ * same 30-second step, someone replaying a code they saw over a shoulder gets nowhere.
+ */
+async function codeIsRight(challenge: { _id: Types.ObjectId; codeHash: string; method?: string }, phone: string, otp: string): Promise<boolean> {
+  if (challenge.method !== 'authenticator' || !env.ownerTotpKey) return safeEqual(challenge.codeHash, otpDigest(phone, otp));
+  const step = matchTotp(env.ownerTotpKey, otp);
+  if (step === null) return false;
+  if (await OtpChallenge.exists({ phone, _id: { $ne: challenge._id }, totpStep: step })) return false;
+  await OtpChallenge.updateOne({ _id: challenge._id }, { $set: { totpStep: step } });
+  return true;
 }
 
 /**
@@ -70,7 +89,7 @@ export async function checkCode(phone: string, otp: string): Promise<Types.Objec
   ).lean();
   if (!tried) throw new AppError(429, 'CODE_LOCKED', 'Too many wrong codes. Ask for a new one.');
 
-  if (!safeEqual(tried.codeHash, otpDigest(phone, otp))) {
+  if (!(await codeIsRight(tried, phone, otp))) {
     const left = env.OTP_MAX_ATTEMPTS - tried.attempts;
     if (left <= 0) await OtpChallenge.updateOne({ _id: tried._id }, { $set: { consumedAt: now } });
     throw new AppError(400, 'INVALID_CODE', left > 0 ? `That code is not right. ${left} ${left === 1 ? 'try' : 'tries'} left.` : 'That code is not right. Ask for a new one.', {

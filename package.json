@@ -20,7 +20,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check": "npm run typecheck && npm run lint",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "ai:check": "npm run ai:check -w @spendly/api"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

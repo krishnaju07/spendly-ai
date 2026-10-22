@@ -1,5 +1,6 @@
 import { AppError } from '../lib/errors';
 import { McpClient, payloadOf } from './mcp';
+import { describeDetail, parseItems, type OrderDetail } from '@spendly/shared';
 import { isObj, ordersOf, pick, statusOf, toDate, type ProviderOrder } from './order-parse';
 
 /**
@@ -20,19 +21,13 @@ function paiseOf(v: unknown): number | null {
   return null;
 }
 
-function itemsOf(detail: unknown): string {
-  if (!isObj(detail) || !Array.isArray(detail.shipments)) return '';
-  const names: string[] = [];
-  for (const shipment of detail.shipments) {
-    if (!isObj(shipment) || !Array.isArray(shipment.products)) continue;
-    for (const product of shipment.products) {
-      if (!isObj(product)) continue;
-      const name = pick(product, 'productName', 'name');
-      const qty = Number(pick(product, 'quantityOrdered', 'quantity'));
-      if (typeof name === 'string') names.push(qty > 1 ? `${name} ×${qty}` : name);
-    }
+/** The dishes of an order: every product of every shipment. */
+function detailOf(detail: unknown): OrderDetail {
+  const products: unknown[] = [];
+  if (isObj(detail) && Array.isArray(detail.shipments)) {
+    for (const shipment of detail.shipments) if (isObj(shipment) && Array.isArray(shipment.products)) products.push(...shipment.products);
   }
-  return names.length > 4 ? `${names.slice(0, 4).join(', ')} +${names.length - 4} more` : names.join(', ');
+  return { place: null, area: null, items: parseItems(products) };
 }
 
 export async function readZeptoOrders(
@@ -76,7 +71,8 @@ export async function readZeptoOrders(
       missing.add('time');
       continue;
     }
-    orders.push({ ref, platform: 'zepto', merchantName: 'Zepto', amountPaise: Math.max(net, 1), date, status, description: itemsOf(detail) || 'Zepto order' });
+    const order = detailOf(detail);
+    orders.push({ ref, platform: 'zepto', merchantName: 'Zepto', amountPaise: Math.max(net, 1), date, status, description: describeDetail(order, 'Zepto order'), detail: order });
   }
   if (rows.length && !orders.length) {
     throw new AppError(502, 'PROVIDER_FORMAT', `Zepto sent ${rows.length} order${rows.length === 1 ? '' : 's'}, but Spendly could not read their ${[...missing].join(' or ') || 'details'}, so nothing was imported.`);
