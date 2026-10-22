@@ -43,45 +43,48 @@
 /*
  * Design tokens.
  * Dark (default) is an ink canvas with charcoal surfaces, white pill actions and a white "sheet"
- * that slides over it. Light is the mint canvas with black pills and a black sheet — the same
- * layout, inverted. Chart colours follow the validated categorical palette (8 hues, fixed order).
+ * that slides over it. Light is a paper canvas (cool off-white) with white cards, indigo-ink pills and an
+ * ink sheet — the same layout, inverted. Chart colours follow the validated categorical palette (8 hues,
+ * fixed order).
  */
 :root {
+  /* native controls (checkboxes, scrollbars, date pickers) follow the app's theme, not the device's */
+  color-scheme: light;
   --radius: 1.25rem;
 
-  --background: #bff6fa;
-  --foreground: #07090b;
-  --card: #fcffff;
-  --card-foreground: #07090b;
+  --background: #f5f6fa;
+  --foreground: #0f1222;
+  --card: #ffffff;
+  --card-foreground: #0f1222;
   --popover: #ffffff;
-  --popover-foreground: #07090b;
-  --primary: #0a0b0d;
+  --popover-foreground: #0f1222;
+  --primary: #14172b;
   --primary-foreground: #ffffff;
-  --secondary: #a9e7ee;
-  --secondary-foreground: #07090b;
-  --muted: #d7f8fb;
-  --muted-foreground: #36585e;
-  --accent: #9fe3ea;
-  --accent-foreground: #07090b;
+  --secondary: #e9ebf4;
+  --secondary-foreground: #14172b;
+  --muted: #f0f1f7;
+  --muted-foreground: #596079;
+  --accent: #e7e9f4;
+  --accent-foreground: #0f1222;
   --destructive: #c0362c;
-  --border: rgb(7 9 11 / 0.1);
-  --input: rgb(7 9 11 / 0.18);
-  --ring: #07090b;
+  --border: rgb(20 23 43 / 0.09);
+  --input: rgb(20 23 43 / 0.16);
+  --ring: #5b4bd6;
 
-  --tile: #a9e7ee;
-  --sheet: #07090b;
-  --sheet-foreground: #f4f5f6;
-  --sheet-muted: #9aa0a9;
+  --tile: #eceef7;
+  --sheet: #14172b;
+  --sheet-foreground: #f4f5fa;
+  --sheet-muted: #a1a7c0;
   --sheet-border: rgb(255 255 255 / 0.1);
-  --brand: #07090b;
+  --brand: #14172b;
   --brand-foreground: #ffffff;
 
-  --ok: #006300;
-  --warn: #8a4b00;
-  --bad: #b42318;
-  --ok-soft: rgb(0 99 0 / 0.12);
-  --warn-soft: rgb(138 75 0 / 0.14);
-  --bad-soft: rgb(180 35 24 / 0.12);
+  --ok: #0b7a43;
+  --warn: #946000;
+  --bad: #c0362c;
+  --ok-soft: rgb(11 122 67 / 0.1);
+  --warn-soft: rgb(148 96 0 / 0.12);
+  --bad-soft: rgb(192 54 44 / 0.1);
 
   --series-1: #2a78d6;
   --series-2: #eb6834;
@@ -96,20 +99,22 @@
   --status-warning: #fab219;
   --status-serious: #ec835a;
   --status-critical: #d03b3b;
-  --chart-grid: rgb(7 9 11 / 0.08);
-  --chart-axis: rgb(7 9 11 / 0.22);
+  --chart-grid: rgb(20 23 43 / 0.08);
+  --chart-axis: rgb(20 23 43 / 0.22);
   --chart-muted: #6b7782;
   --chart-ramp-1: #cde2fb;
   --chart-ramp-3: #6da7ec;
   --chart-ramp-5: #256abf;
   --chart-ramp-7: #0d366b;
 
-  --canvas-glow-a: rgb(255 255 255 / 0.55);
-  --canvas-glow-b: rgb(255 255 255 / 0.18);
-  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 12px 32px -18px rgb(7 40 46 / 0.35);
+  /* a faint violet wash at the top corner: enough to lift the page off flat grey, nothing like a colour cast */
+  --canvas-glow-a: rgb(124 92 255 / 0.09);
+  --canvas-glow-b: rgb(70 140 255 / 0.06);
+  --shadow-card: 0 1px 2px rgb(20 23 43 / 0.04), 0 10px 28px -16px rgb(20 23 43 / 0.16);
 }
 
 .dark {
+  color-scheme: dark;
   --background: #08090b;
   --foreground: #f4f5f6;
   --card: #131417;
@@ -401,7 +406,7 @@
 }
 
 
-/* The inverse "sheet" (white over dark, black over mint). Semantic tones are re-mapped so every
+/* The inverse "sheet" (white over dark, ink over paper). Semantic tones are re-mapped so every
    status colour stays readable on it in both themes. */
 .sheet-surface {
   background: var(--sheet);

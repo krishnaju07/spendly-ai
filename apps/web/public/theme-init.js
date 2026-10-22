@@ -11,5 +11,5 @@
     if (/^(studio|jakarta|grotesk)$/.test(face)) root.dataset.typeface = face;
   } catch (e) {}
   var meta = document.querySelectorAll('meta[name="theme-color"]');
-  meta.forEach(function (m) { m.setAttribute('content', dark ? '#08090B' : '#BFF6FA'); m.removeAttribute('media'); });
+  meta.forEach(function (m) { m.setAttribute('content', dark ? '#08090B' : '#F5F6FA'); m.removeAttribute('media'); });
 })();

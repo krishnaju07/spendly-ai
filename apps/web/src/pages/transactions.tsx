@@ -136,6 +136,8 @@ export default function Transactions() {
   const { range, rangeParams, apiParams, filters, params, setParams } = useFilters();
   const qc = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // on a phone the row checkboxes stay out of the way until "Select" is tapped
+  const [selectMode, setSelectMode] = useState(false);
   const [dupes, setDupes] = useState(false);
   const [search, setSearch] = useState(params.get('q') ?? '');
   const roomy = useMediaQuery('(min-width: 640px)');
@@ -175,7 +177,8 @@ export default function Transactions() {
   const totals = data.data?.totals;
   const allSelected = items.length > 0 && items.every((t) => selected.has(t.id));
   const toggle = (id: string, on: boolean) => setSelected((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; });
-  const clearSel = () => setSelected(new Set());
+  const clearSel = () => { setSelected(new Set()); setSelectMode(false); };
+  const selecting = selectMode || selected.size > 0;
   const refresh = () => { clearSel(); void qc.invalidateQueries({ predicate: (x) => x.queryKey[0] !== 'me' && x.queryKey[0] !== 'catalog' }); };
 
   // a day's total comes from the whole range (the page may cut a day in two); without it, from what is on screen
@@ -228,18 +231,21 @@ export default function Transactions() {
             </SelectContent>
           </Select>
         </div>
-        <FilterBar />
         {importJob && (
           <p className="flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
             Showing what one import added, across all dates.
             <Button size="xs" variant="secondary" onClick={() => set({ importJob: null })}>Show everything</Button>
           </p>
         )}
-        <div className="scrollbar-none relative -mx-3 flex snap-x gap-2 overflow-x-auto scroll-px-3 px-3 py-1 *:shrink-0 *:snap-start md:mx-0 md:flex-wrap md:overflow-visible md:p-0" role="group" aria-label="Quick views">
-          {([['needsReview', 'Needs review', CircleHelp], ['duplicates', 'Possible duplicates', Copy], ['recurring', 'Recurring', Repeat], ['linked', 'From linked accounts', Link2]] as const).map(([k, label, Icon]) => (
-            <Button key={k} size="sm" variant={flags[k] ? 'default' : 'outline'} aria-pressed={Boolean(flags[k])} onClick={() => toggleFlag(k)} className="h-9"><Icon /> {label}</Button>
-          ))}
-          <Button size="sm" variant="ghost" className="h-9" onClick={() => setDupes(true)}>Resolve duplicates…</Button>
+        {/* on a phone the quick views and the filters share one swipeable row instead of stacking two */}
+        <div className="scrollbar-none relative -mx-3 flex snap-x scroll-px-3 items-center gap-2 overflow-x-auto px-3 py-1 *:snap-start md:mx-0 md:flex-col md:items-stretch md:gap-3 md:overflow-visible md:p-0">
+          <div className="flex gap-2 max-md:contents md:order-2 md:flex-wrap" role="group" aria-label="Quick views">
+            {([['needsReview', 'Needs review', CircleHelp], ['duplicates', 'Possible duplicates', Copy], ['recurring', 'Recurring', Repeat], ['linked', 'From linked accounts', Link2]] as const).map(([k, label, Icon]) => (
+              <Button key={k} size="sm" variant={flags[k] ? 'default' : 'outline'} aria-pressed={Boolean(flags[k])} onClick={() => toggleFlag(k)} className="h-9"><Icon /> {label}</Button>
+            ))}
+            <Button size="sm" variant="ghost" className="h-9" onClick={() => setDupes(true)}>Resolve duplicates…</Button>
+          </div>
+          <FilterBar className="max-md:contents md:order-1" />
         </div>
       </div>
 
@@ -253,11 +259,13 @@ export default function Transactions() {
         <>
           <div className={cn('rounded-[32px] border bg-card p-2 shadow-card sm:p-3', data.isFetching && 'opacity-70 transition-opacity')}>
             <div className="flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground">
-              <label className="flex cursor-pointer items-center gap-2">
+              {!selecting && <Button size="xs" variant="secondary" className="md:hidden" onClick={() => setSelectMode(true)}>Select</Button>}
+              <label className={cn('flex cursor-pointer items-center gap-2', !selecting && 'max-md:hidden')}>
                 <input type="checkbox" aria-label="Select all on this page" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(items.map((t) => t.id)) : new Set())} className="size-4 accent-[var(--series-1)]" />
-                Select all on this page
+                <span>Select all<span className="max-sm:hidden"> on this page</span></span>
               </label>
-              <span className="tnum ml-auto">{items.length} shown</span>
+              <span className={cn('tnum ml-auto', selecting && 'max-md:hidden')}>{items.length} shown</span>
+              {selecting && <Button size="xs" className="ml-auto md:hidden" onClick={clearSel}>Done</Button>}
             </div>
             {groups.map((g) => (
               <section key={g.day} aria-label={g.title ?? 'Transactions'}>
@@ -270,7 +278,7 @@ export default function Transactions() {
                     <span className="tnum text-xs text-muted-foreground">{inr(g.paise)} spent</span>
                   </header>
                 )}
-                {g.items.map((t) => <LedgerRow key={t.id} t={t} tz={tz} selected={selected.has(t.id)} onSelect={(c) => toggle(t.id, c)} onOpen={openView} showDate={!g.title} />)}
+                {g.items.map((t) => <LedgerRow key={t.id} t={t} tz={tz} selected={selected.has(t.id)} selecting={selecting} onSelect={(c) => toggle(t.id, c)} onOpen={openView} showDate={!g.title} />)}
               </section>
             ))}
           </div>

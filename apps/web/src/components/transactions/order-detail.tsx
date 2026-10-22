@@ -80,6 +80,21 @@ export function DishChips({
   );
 }
 
+/** The same dishes as one plain line, for a phone where a row of pills would only be cut off: "● Mini Tiffin ×2 +8". */
+export function DishLine({ items, className }: { items: OrderItem[]; className?: string }) {
+  const first = items[0];
+  if (!first) return null;
+  const rest = items.length - 1;
+  return (
+    <span className={cn('flex min-w-0 items-center gap-1.5 text-[13px] text-foreground/80', className)}>
+      <DietMark diet={first.diet} />
+      <span className="truncate">{first.name}</span>
+      {first.quantity > 1 && <span className="tnum shrink-0 text-muted-foreground">×{first.quantity}</span>}
+      {rest > 0 && <span className="shrink-0 text-muted-foreground">+{rest} more</span>}
+    </span>
+  );
+}
+
 /** The order laid out like a bill: where from, then each dish with its mark and count. */
 export function OrderCard({ detail }: { detail: OrderDetail }) {
   const dishes = detail.items.reduce((n, i) => n + i.quantity, 0);

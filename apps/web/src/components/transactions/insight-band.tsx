@@ -9,7 +9,7 @@ import { inr } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const LABEL = 'text-[10.5px] font-semibold tracking-[0.12em] text-muted-foreground uppercase';
-const TILE = 'rounded-[24px] border bg-card p-4 shadow-card sm:rounded-[28px] sm:p-5';
+const TILE = 'rounded-[22px] border bg-card p-3.5 shadow-card sm:rounded-[28px] sm:p-5';
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -41,13 +41,13 @@ function SpendBars({ daily }: { daily: TransactionInsightsDto['daily'] }) {
       timeZone: 'UTC',
     });
   return (
-    <div className="mt-4">
+    <div className="mt-3 sm:mt-4">
       <svg
         viewBox={`0 0 ${bars.length * W} 56`}
         preserveAspectRatio="none"
         role="img"
         aria-label={`Spend per day. The highest was ${inr(top.paise)} on ${new Date(`${top.day}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' })}.`}
-        className="h-14 w-full overflow-visible"
+        className="h-10 w-full overflow-visible sm:h-14"
       >
         {bars.map((b, i) => {
           const h = b.paise === 0 ? 2 : Math.max(4, (b.paise / max) * 52);
@@ -89,7 +89,7 @@ function DietSplit({ diet }: { diet: NonNullable<TransactionInsightsDto['diet']>
   return (
     <>
       <div
-        className="mt-4 flex h-3 w-full gap-0.5 overflow-hidden rounded-full"
+        className="mt-3 flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full sm:mt-4 sm:h-3"
         role="img"
         aria-label={segments.map((s) => `${part(s.n)}% ${s.label}`).join(', ')}
       >
@@ -179,7 +179,7 @@ export function InsightBand({ totals, query }: { totals: PeriodTotals | undefine
           <p className={cn(LABEL, 'flex items-center gap-1.5')}>
             <Store className="size-3.5" aria-hidden /> Favourite place
           </p>
-          <p className="mt-3 line-clamp-2 text-base leading-tight font-semibold tracking-tight sm:text-[19px]">
+          <p className="mt-2.5 line-clamp-2 text-[15px] leading-tight font-semibold tracking-tight sm:mt-3 sm:text-[19px]">
             {ins.topPlace.name}
           </p>
           <p className="mt-1.5 text-[13px] text-muted-foreground">
@@ -187,10 +187,13 @@ export function InsightBand({ totals, query }: { totals: PeriodTotals | undefine
             {ins.topPlace.orders === 1 ? 'order' : 'orders'} · {inr(ins.topPlace.paise)}
           </p>
           {ins.topDish && (
-            <p className="mt-3 line-clamp-2 rounded-2xl bg-muted/70 px-3 py-2 text-xs text-muted-foreground">
-              Most ordered:{' '}
-              <span className="font-semibold text-foreground">{ins.topDish.name}</span> ×
-              {ins.topDish.times}
+            <p className="mt-2.5 rounded-2xl bg-muted/70 px-3 py-1.5 text-xs text-muted-foreground sm:mt-3 sm:line-clamp-2 sm:py-2">
+              <span className="block text-[10.5px] sm:inline sm:text-xs">
+                Most ordered<span className="max-sm:hidden">:</span>
+              </span>{' '}
+              <span className="block truncate font-semibold text-foreground sm:inline">
+                {ins.topDish.name} ×{ins.topDish.times}
+              </span>
             </p>
           )}
         </section>
@@ -214,7 +217,7 @@ export function InsightBand({ totals, query }: { totals: PeriodTotals | undefine
             <Leaf className="size-3.5" aria-hidden /> On your plate
           </p>
           <DietSplit diet={ins.diet} />
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-3 text-xs text-muted-foreground max-sm:hidden">
             By dishes ordered, from your linked accounts.
           </p>
         </section>

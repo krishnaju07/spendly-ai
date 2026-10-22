@@ -59,7 +59,7 @@
   overflow-x: clip;
 }
 :root:not(.dark) .auth-root {
-  --ring-track: rgb(7 9 11 / 0.07);
+  --ring-track: rgb(20 23 43 / 0.07);
   --glass: color-mix(in oklab, #ffffff 62%, transparent);
 }
 
@@ -83,9 +83,10 @@
 .aurora-blob.a { --c: 124 92 255; --o: 0.85; left: -20vmax; top: -26vmax; animation: blob-a 26s ease-in-out infinite; }
 .aurora-blob.b { --c: 94 224 234; --o: 0.5; right: -26vmax; top: 4vmax; animation: blob-b 32s ease-in-out infinite; }
 .aurora-blob.c { --c: 232 123 164; --o: 0.38; left: 16vmax; bottom: -34vmax; animation: blob-c 38s ease-in-out infinite; }
-:root:not(.dark) .aurora-blob.a { --o: 0.4; }
-:root:not(.dark) .aurora-blob.b { --o: 0.7; }
-:root:not(.dark) .aurora-blob.c { --o: 0.42; }
+/* on paper the blobs are tints, not colour: the cyan one turns into a soft periwinkle so nothing washes the page teal */
+:root:not(.dark) .aurora-blob.a { --o: 0.3; }
+:root:not(.dark) .aurora-blob.b { --c: 120 150 255; --o: 0.32; }
+:root:not(.dark) .aurora-blob.c { --o: 0.26; }
 .aurora-dots {
   position: absolute;
   inset: -26px;
@@ -94,7 +95,7 @@
   mask-image: radial-gradient(ellipse 70% 60% at 28% 40%, #000, transparent 75%);
   animation: dots-drift 40s linear infinite;
 }
-:root:not(.dark) .aurora-dots { --dot: 7 9 11; }
+:root:not(.dark) .aurora-dots { --dot: 20 23 43; }
 .aurora-spot {
   position: absolute;
   inset: 0;
@@ -369,7 +370,7 @@
   transform-style: preserve-3d;
   transition: transform 0.35s var(--ease-out);
 }
-:root:not(.dark) .auth-card { box-shadow: 0 40px 90px -46px rgb(7 40 46 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.8); }
+:root:not(.dark) .auth-card { box-shadow: 0 40px 90px -46px rgb(20 23 43 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.8); }
 /* a bright beam travels around the edge, and a soft light follows the pointer */
 .auth-card::before {
   content: '';

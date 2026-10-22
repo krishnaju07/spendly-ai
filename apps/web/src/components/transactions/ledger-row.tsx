@@ -18,7 +18,7 @@ import { useCatalog } from '@/hooks/use-catalog';
 import { formatTime } from '@/lib/format';
 import { paidWithOf } from '@/lib/labels';
 import { cn } from '@/lib/utils';
-import { DishChips, detailOfTxn } from './order-detail';
+import { DishChips, DishLine, detailOfTxn } from './order-detail';
 import { TxnAmount } from './txn-row';
 
 /** Which meal an order time falls in: a food order reads better as "Dinner" than as a clock time alone. */
@@ -43,6 +43,7 @@ export function LedgerRow({
   t,
   tz,
   selected,
+  selecting = false,
   onSelect,
   onOpen,
   showDate = false,
@@ -50,6 +51,8 @@ export function LedgerRow({
   t: TransactionDto;
   tz: string;
   selected: boolean;
+  /** Selection is under way: on a phone the checkboxes only appear then, so they do not squeeze every row. */
+  selecting?: boolean;
   onSelect: (checked: boolean) => void;
   onOpen: (id: string) => void;
   /** The date is not shown by a day heading above (the list is sorted by something else). */
@@ -96,8 +99,9 @@ export function LedgerRow({
       <label
         className={cn(
           '-m-2.5 grid shrink-0 cursor-pointer place-items-center p-2.5 transition-opacity',
+          !selecting && !selected && 'max-md:hidden',
           !selected &&
-            'md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100 pointer-coarse:opacity-100',
+            'md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100 md:pointer-coarse:opacity-100',
         )}
       >
         <input
@@ -129,7 +133,7 @@ export function LedgerRow({
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="truncate text-[15px] font-semibold sm:text-base">
+            <span className="line-clamp-2 text-[15px] leading-snug font-semibold sm:truncate sm:text-base">
               {order?.place ?? t.merchantName}
             </span>
             {t.classification.needsReview && (
@@ -165,7 +169,7 @@ export function LedgerRow({
           </span>
           {order?.items.length ? (
             <>
-              <DishChips items={order.items} max={1} className="mt-1.5 sm:hidden" />
+              <DishLine items={order.items} className="mt-0.5 sm:hidden" />
               <DishChips items={order.items} max={3} className="mt-1.5 hidden sm:flex" />
             </>
           ) : null}

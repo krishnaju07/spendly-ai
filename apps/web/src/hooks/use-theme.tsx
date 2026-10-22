@@ -29,7 +29,7 @@ function apply(r: Resolved) {
   root.classList.toggle('dark', r === 'dark');
   root.dataset.theme = r;
   document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
-    m.setAttribute('content', r === 'dark' ? '#08090B' : '#BFF6FA');
+    m.setAttribute('content', r === 'dark' ? '#08090B' : '#F5F6FA');
     m.removeAttribute('media');
   });
 }
