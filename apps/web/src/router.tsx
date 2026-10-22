@@ -5,7 +5,7 @@ import { ErrorState } from '@/components/common/states';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { Logo } from '@/components/layout/logo';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 function Splash() {
   return (
@@ -39,12 +39,23 @@ function NotFound() {
 
 const page = (load: () => Promise<{ default: React.ComponentType }>) => async () => ({ Component: (await load()).default });
 
+function LinkRoute({ which }: { which: 'start' | 'callback' }) {
+  const [Page, setPage] = useState<React.ComponentType | null>(null);
+  useEffect(() => {
+    void (which === 'start' ? import('@/pages/link') : import('@/pages/link-callback')).then((m) => setPage(() => m.default));
+  }, [which]);
+  return Page ? <Page /> : <Splash />;
+}
+
 const authPage = async () => ({ Component: (await import('@/pages/login')).default });
 
 export const router = createBrowserRouter([
   // sign in and create-account are one page (it reads the path), so the scene stays mounted while the card morphs
   { path: '/login', HydrateFallback: Splash, lazy: authPage },
   { path: '/register', HydrateFallback: Splash, lazy: authPage },
+  // linking an account: a small window that starts the service's own sign-in, and the page the service sends the person back to
+  { path: '/link', HydrateFallback: Splash, element: <RequireAuth><LinkRoute which="start" /></RequireAuth> },
+  { path: '/callback', HydrateFallback: Splash, element: <RequireAuth><LinkRoute which="callback" /></RequireAuth> },
   {
     element: (
       <RequireAuth>

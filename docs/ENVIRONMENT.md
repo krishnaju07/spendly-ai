@@ -35,7 +35,7 @@ Read once at start-up and validated; an invalid value stops the server with a cl
 | `AI_VISION` | `true` | Set `false` for an endpoint that cannot read images (most hosted open models, including NVIDIA's text models), so receipt photos are never sent to it. |
 | `AI_TIMEOUT_MS` | `30000` | Per-request timeout (1000–120000). |
 | `AI_MAX_OUTPUT_TOKENS` | `4000` | Output budget (512–16000); thinking tokens share it on current Claude models. |
-| `SWIGGY_MCP_URL` | `https://mcp.swiggy.com` | Where Swiggy's official MCP server lives. Only changed to point at a test double. See *Linking Swiggy* in [SETUP.md](SETUP.md). |
+| `SWIGGY_MCP_URL`, `ZEPTO_MCP_URL` | `https://mcp.swiggy.com`, `https://mcp.zepto.co.in` | Where each service's official MCP server lives. Only changed to point at a test double: leaving one set sends account links to it. See *Linking Swiggy and Zepto* in [SETUP.md](SETUP.md). |
 | `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` | — | Reserved. A Gmail connector is **not implemented**; setting these only changes the status shown on the Import screen. |
 
 ## Rate limits (per IP unless noted)

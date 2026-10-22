@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { isProviderId, type ProviderId } from '@spendly/shared';
-import { AppError, notFound } from '../lib/errors';
+import { notFound } from '../lib/errors';
 import { authOf } from '../middleware/context';
 import { providerLimiter } from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
@@ -21,26 +21,22 @@ providersRouter.post('/:id/connect', providerLimiter, validate({ params }), asyn
   res.json({ data: { url: await startConnect(authOf(req), idOf(req)) } });
 });
 
-const callbackQuery = z.object({ code: z.string().max(2000).optional(), state: z.string().max(200).optional(), error: z.string().max(100).optional() });
+const completeBody = z.object({ code: z.string().min(1).max(2000), state: z.string().min(1).max(200) });
 
-/** Where the service sends the person back to. It always ends in a redirect into Settings, saying how it went. */
-providersRouter.get('/:id/callback', validate({ params, query: callbackQuery }), async (req, res) => {
-  const id = idOf(req);
-  const q = req.valid.query as z.output<typeof callbackQuery>;
-  const back = (result: 'ok' | 'denied' | 'error') => res.redirect(`/settings?tab=tracking&link=${id}:${result}`);
-  if (q.error) return back('denied');
-  if (!q.code || !q.state) return back('error');
-  try {
-    await finishConnect(authOf(req), id, { code: q.code, state: q.state });
-    back('ok');
-  } catch (error) {
-    if (!(error instanceof AppError)) throw error;
-    back('error');
-  }
+/**
+ * The page the service sends the person back to (Spendly's own /callback) hands over what it was given. A POST, so
+ * a link someone is tricked into opening cannot link an account; it also needs the signed-in session and its token.
+ */
+providersRouter.post('/complete', validate({ body: completeBody }), async (req, res) => {
+  const { code, state } = req.valid.body as z.output<typeof completeBody>;
+  res.json({ data: { provider: await finishConnect(authOf(req), { code, state }) } });
 });
 
-providersRouter.post('/:id/sync', providerLimiter, validate({ params }), async (req, res) => {
-  res.json({ data: await syncProvider(authOf(req), idOf(req)) });
+const syncBody = z.object({ preview: z.boolean().optional() });
+
+providersRouter.post('/:id/sync', providerLimiter, validate({ params, body: syncBody }), async (req, res) => {
+  const { preview } = req.valid.body as z.output<typeof syncBody>;
+  res.json({ data: await syncProvider(authOf(req), idOf(req), { preview }) });
 });
 
 providersRouter.delete('/:id', validate({ params }), async (req, res) => {

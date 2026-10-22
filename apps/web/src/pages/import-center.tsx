@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, FileSpreadsheet, FileText, FileUp, Image as ImageIcon, Mail, ShieldCheck, Trash2, Upload } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import type { ImportJobDto, IntegrationDto } from '@spendly/shared';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
@@ -46,7 +46,9 @@ function UploadCard() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
-  const [kind, setKind] = useState<string>('auto');
+  // a guide in Settings links here with the file type already chosen (?kind=receipt)
+  const [params] = useSearchParams();
+  const [kind, setKind] = useState<string>(() => KINDS.find((k) => k.value === params.get('kind'))?.value ?? 'auto');
   const [over, setOver] = useState(false);
   const upload = useMutation({
     mutationFn: (file: File) => {

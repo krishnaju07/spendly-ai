@@ -21,3 +21,5 @@ export * from './schemas';
 export * from './dto';
 export * from './catalog/categories';
 export * from './catalog/platforms';
+export * from './catalog/app-guide';
+export * from './catalog/app-guides';

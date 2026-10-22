@@ -61,6 +61,24 @@ export async function discover(base: string, fallback: { authorization: string; 
   return fallback;
 }
 
+/**
+ * Where a resource server (the MCP endpoint) says its sign-in lives (RFC 9728), then that server's own endpoints. Some
+ * services (Zepto) keep sign-in on a separate host; others answer for both on one.
+ */
+export async function discoverViaResource(resource: string, fallback: OAuthEndpoints): Promise<OAuthEndpoints> {
+  try {
+    const res = await request(new URL('/.well-known/oauth-protected-resource', resource).toString(), { headers: { accept: 'application/json' } });
+    if (res.ok) {
+      const meta = (await res.json()) as { authorization_servers?: unknown };
+      const server = Array.isArray(meta.authorization_servers) ? meta.authorization_servers.find((s): s is string => typeof s === 'string') : undefined;
+      if (server) return await discover(assertSafeUrl(server).origin, fallback);
+    }
+  } catch (error) {
+    if (error instanceof AppError && error.code !== 'PROVIDER_UNREACHABLE') throw error;
+  }
+  return discover(resource, fallback);
+}
+
 /** RFC 7591: the service hands out a client id for Spendly's redirect address, so nothing has to be configured by hand. */
 export async function registerClient(endpoint: string, redirectUri: string): Promise<string> {
   const res = await request(endpoint, {
@@ -109,8 +127,15 @@ export interface Tokens {
 /** The token endpoint refused: the sign-in has to be done again. */
 export class SignInExpired extends Error {}
 
-async function tokenCall(endpoint: string, body: Record<string, string>): Promise<Tokens> {
-  const res = await request(endpoint, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(body) });
+/** How a service wants token requests: Swiggy takes JSON, standard OAuth servers take a form. */
+export type TokenFormat = 'json' | 'form';
+
+async function tokenCall(endpoint: string, body: Record<string, string>, format: TokenFormat): Promise<Tokens> {
+  const res = await request(endpoint, {
+    method: 'POST',
+    headers: { 'content-type': format === 'json' ? 'application/json' : 'application/x-www-form-urlencoded', accept: 'application/json' },
+    body: format === 'json' ? JSON.stringify(body) : new URLSearchParams(body).toString(),
+  });
   const json = (await res.json().catch(() => ({}))) as { access_token?: unknown; refresh_token?: unknown; expires_in?: unknown; error?: unknown };
   if (res.status === 400 || res.status === 401) throw new SignInExpired(typeof json.error === 'string' ? json.error : 'invalid_grant');
   if (!res.ok || typeof json.access_token !== 'string') throw new AppError(502, 'PROVIDER_ERROR', 'The service could not complete the sign-in. Please try again.');
@@ -118,11 +143,11 @@ async function tokenCall(endpoint: string, body: Record<string, string>): Promis
   return { accessToken: json.access_token, refreshToken: typeof json.refresh_token === 'string' ? json.refresh_token : null, expiresAt: new Date(Date.now() + seconds * 1000) };
 }
 
-export const exchangeCode = (endpoint: string, p: { clientId: string; code: string; verifier: string; redirectUri: string }) =>
-  tokenCall(endpoint, { grant_type: 'authorization_code', client_id: p.clientId, code: p.code, code_verifier: p.verifier, redirect_uri: p.redirectUri });
+export const exchangeCode = (endpoint: string, p: { clientId: string; code: string; verifier: string; redirectUri: string; format: TokenFormat }) =>
+  tokenCall(endpoint, { grant_type: 'authorization_code', client_id: p.clientId, code: p.code, code_verifier: p.verifier, redirect_uri: p.redirectUri }, p.format);
 
-export const refreshTokens = (endpoint: string, p: { clientId: string; refreshToken: string }) =>
-  tokenCall(endpoint, { grant_type: 'refresh_token', client_id: p.clientId, refresh_token: p.refreshToken });
+export const refreshTokens = (endpoint: string, p: { clientId: string; refreshToken: string; format: TokenFormat }) =>
+  tokenCall(endpoint, { grant_type: 'refresh_token', client_id: p.clientId, refresh_token: p.refreshToken }, p.format);
 
 // ── MCP ────────────────────────────────────────────────────────────────────────────────────────
 

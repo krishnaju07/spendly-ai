@@ -58,6 +58,8 @@ const schema = z.object({
   AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(512).max(16000).default(4000),
   // where Swiggy's MCP server lives; only changed to point at a test double
   SWIGGY_MCP_URL: z.string().optional(),
+  ZEPTO_MCP_URL: z.string().optional(),
+  ZOMATO_MCP_URL: z.string().optional(),
   GMAIL_CLIENT_ID: z.string().optional(),
   GMAIL_CLIENT_SECRET: z.string().optional(),
   // sign-in codes: people sign in with a code texted to their mobile number

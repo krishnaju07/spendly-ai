@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AppWindow, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { TrackList } from '@/components/auth/track-list';
+import { AppGuides } from '@/components/settings/app-guides';
 import { ProviderLinks } from '@/components/settings/provider-links';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ export function TrackedAppsSettings() {
       </Card>
 
       <ProviderLinks />
+      <AppGuides />
     </div>
   );
 }

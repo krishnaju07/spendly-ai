@@ -12,7 +12,8 @@ import {
   type PaymentMethod,
   type TransactionType,
 } from '@spendly/shared';
-import { readReceiptWithLlm } from '../ai/service';
+import { readOrdersWithLlm } from '../ai/service';
+import { looseDateToIso } from '../services/order-parse';
 import { logger } from '../lib/logger';
 import type { AuthContext } from '../middleware/context';
 import { User, UserPreference } from '../models/account';
@@ -216,10 +217,19 @@ export async function processJob(jobId: Types.ObjectId): Promise<void> {
 
   // image receipts have no table: ask the AI reader if the user enabled it, otherwise leave blanks to fill in
   if (job.fileType === 'image') {
-    const reading = await readReceiptWithLlm(auth.prefs, { mediaType: 'image/jpeg', dataBase64: buffer.toString('base64') });
-    if (reading) {
-      dataRows[0] = [reading.date ?? '', reading.merchant ?? '', 'Receipt', reading.total ?? ''];
-      job.notes.push('Read with your AI provider — check every field before importing.');
+    const reading = await readOrdersWithLlm(auth.prefs, { mediaType: 'image/jpeg', dataBase64: buffer.toString('base64') });
+    if (reading?.orders.length) {
+      // a list screen runs newest first and often prints no year: each date is pulled back to stay below the one above it
+      let above: string | null = null;
+      const rows = reading.orders.map((o) => {
+        const iso = o.date ? looseDateToIso(o.date, Date.now(), above) : null;
+        if (iso) above = iso;
+        // the app's name, when the screen shows it, is the merchant so the app is recognised; the restaurant or shop is the description
+        return [iso ?? o.date ?? '', reading.app ?? o.merchant ?? '', reading.app && o.merchant ? o.merchant : reading.orders.length > 1 ? 'Screenshot' : 'Receipt', o.total ?? ''];
+      });
+      dataRows.length = 0;
+      dataRows.push(...rows);
+      job.notes.push(`Read ${rows.length === 1 ? 'one order' : `${rows.length} orders`} with your AI provider — check every date and amount against the original before importing.`);
     } else job.notes.push('Receipt images are stored but not read automatically. Fill in the details below, or enable AI receipt reading in Settings.');
   }
 
