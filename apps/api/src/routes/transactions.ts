@@ -29,6 +29,8 @@ import { deleteFile, openFile, saveFile } from '../services/files';
 import { loadLookups } from '../services/lookups';
 import { buildMatch, filterQuery, objectIdParam, pageQuery, rangeQuery, rangesFor } from '../services/query';
 import { toTransactionDto } from '../services/serialize';
+import { renderReportPdf } from '../services/report-pdf';
+import { buildStatement } from '../services/reports';
 import { buildSearchText, createTransaction, deleteTransaction, updateTransaction } from '../services/transactions';
 import { logger } from '../lib/logger';
 
@@ -122,14 +124,28 @@ transactionsRouter.post('/', validate({ body: transactionInputSchema }), async (
   res.status(201).json({ data: { transaction: toTransactionDto(doc, lk), warnings } });
 });
 
-/** Streams every transaction matching the filters as CSV (spreadsheet-safe). */
-transactionsRouter.get('/export', exportLimiter, validate({ query: rangeQuery.extend(filterQuery.shape) }), async (req, res) => {
+const exportQuery = rangeQuery.extend(filterQuery.shape).extend({ format: z.enum(['csv', 'pdf']).default('csv') });
+
+/** Streams every transaction matching the filters as CSV (spreadsheet-safe), or as a printable PDF statement. */
+transactionsRouter.get('/export', exportLimiter, validate({ query: exportQuery }), async (req, res) => {
   const auth = authOf(req);
-  const q = req.valid.query as z.output<typeof rangeQuery> & z.output<typeof filterQuery>;
+  const q = req.valid.query as z.output<typeof exportQuery>;
   const range = q.preset || q.from || q.to ? rangesFor(auth, q).range : undefined;
   const match = buildMatch(auth, { range, filters: q });
   const lk = await loadLookups(auth.userId);
-  const stamp = localDateKey(new Date(), auth.tz);
+  const now = new Date();
+  const stamp = localDateKey(now, auth.tz);
+
+  if (q.format === 'pdf') {
+    const statement = await buildStatement(auth, lk, match, range, now);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="spendly-transactions-${stamp}.pdf"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    const doc = renderReportPdf(statement);
+    doc.pipe(res);
+    doc.end();
+    return;
+  }
 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="spendly-transactions-${stamp}.csv"`);

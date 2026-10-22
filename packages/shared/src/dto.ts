@@ -612,7 +612,7 @@ export interface ReportDto {
     title: string;
     note?: string;
     /** Rows hold raw values (money in paise); the viewer, CSV and PDF format them by column. */
-    columns: Array<{ key: string; label: string; align?: 'left' | 'right'; format?: 'text' | 'money' | 'percent' | 'number' | 'date' }>;
+    columns: Array<{ key: string; label: string; align?: 'left' | 'right'; format?: 'text' | 'money' | 'percent' | 'number' | 'date'; /** Relative width of a text column in the PDF (default 1): a date can be narrow, a description wide. */ weight?: number }>;
     rows: Array<Record<string, string | number | null>>;
   }>;
 }

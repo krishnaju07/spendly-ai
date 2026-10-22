@@ -367,8 +367,9 @@ function table(doc: Doc, section: ReportDto['sections'][number]) {
   const cols = section.columns;
   const textCols = cols.filter((c) => c.align !== 'right');
   const numW = cols.length > 6 ? 58 : 70;
-  const nameW = (WIDTH - (cols.length - textCols.length) * numW) / Math.max(1, textCols.length);
-  const widths = cols.map((c) => (c.align === 'right' ? numW : nameW));
+  const textRoom = WIDTH - (cols.length - textCols.length) * numW;
+  const weightSum = textCols.reduce((n, c) => n + (c.weight ?? 1), 0) || 1;
+  const widths = cols.map((c) => (c.align === 'right' ? numW : (textRoom * (c.weight ?? 1)) / weightSum));
   const xs = widths.reduce<number[]>((acc, w, i) => [...acc, (acc[i] as number) + w], [LEFT]);
   const firstText = cols.findIndex((c) => c.align !== 'right');
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Download, FileJson, FileSpreadsheet, FileUp, Smartphone, Trash2 } from 'lucide-react';
+import { Download, FileJson, FileSpreadsheet, FileText, FileUp, Smartphone, Trash2 } from 'lucide-react';
 import { maskPhone } from '@spendly/shared';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
@@ -119,6 +119,9 @@ export function DataSettings() {
         </SettingRow>
         <SettingRow title="Transactions (CSV)" description="Every transaction in a spreadsheet-friendly file that opens in Excel or Google Sheets.">
           <Button variant="secondary" disabled={busy !== null} onClick={() => void run('csv', () => api.download('/transactions/export', undefined, 'spendly-transactions.csv'))}><FileSpreadsheet /> {busy === 'csv' ? 'Preparing…' : <><Download /> Download</>}</Button>
+        </SettingRow>
+        <SettingRow title="Transactions (PDF)" description="A printable statement: totals first, then every transaction, newest first. Long histories stop at the newest 10,000 rows; the CSV and JSON hold everything.">
+          <Button variant="secondary" disabled={busy !== null} onClick={() => void run('pdf', () => api.download('/transactions/export', { format: 'pdf' }, 'spendly-transactions.pdf'))}><FileText /> {busy === 'pdf' ? 'Preparing…' : <><Download /> Download</>}</Button>
         </SettingRow>
       </SettingsCard>
       <DeleteAccount />

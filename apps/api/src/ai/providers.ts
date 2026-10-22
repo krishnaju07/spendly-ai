@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { env } from '../config/env';
+import { logger } from '../lib/logger';
 
 /**
  * Provider-independent LLM access. The rest of the app talks to `LlmProvider` and never to a
@@ -158,8 +159,13 @@ class OpenAiCompatibleProvider implements LlmProvider {
       }
       if (res.status === 401 || res.status === 403) throw new AiProviderError('auth', 'The AI provider rejected the configured credentials');
       if (res.status === 429) throw new AiProviderError('rate_limited', 'The AI provider is rate limiting requests');
-      if (res.status >= 500) throw new AiProviderError('unavailable', 'The AI provider is unavailable');
-      if (!res.ok) throw new AiProviderError('bad_request', 'The AI provider rejected the request');
+      if (!res.ok) {
+        // the status and the provider's own short message say why; the request (which holds the person's data) is never logged
+        const detail = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 200);
+        logger.warn({ status: res.status, detail }, 'AI provider returned an error');
+        if (res.status >= 500) throw new AiProviderError('unavailable', 'The AI provider is unavailable');
+        throw new AiProviderError('bad_request', 'The AI provider rejected the request');
+      }
       const json = (await res.json()) as {
         model?: string;
         choices?: Array<{ finish_reason?: string; message?: { content?: string | null } }>;
@@ -177,6 +183,8 @@ class OpenAiCompatibleProvider implements LlmProvider {
     } catch (error) {
       if (error instanceof AiProviderError) throw error;
       if ((error as Error).name === 'AbortError') throw new AiProviderError('timeout', 'The AI provider timed out');
+      const cause = (error as { cause?: { code?: string; message?: string } }).cause;
+      logger.warn({ error: (error as Error).message, cause: cause?.code ?? cause?.message }, 'AI provider request failed before a reply');
       throw new AiProviderError('unavailable', 'The AI provider is unavailable');
     }
   }

@@ -10,7 +10,7 @@ import {
 } from '@spendly/shared';
 import type { AuthContext } from '../middleware/context';
 import { Transaction } from '../models/finance';
-import { categoryStats, periodTotals, platformStats, transactionInsights, trendSeries } from './analytics';
+import { categoryStats, periodTotals, platformStats, totalsForMatch, transactionInsights, trendSeries } from './analytics';
 import { listBudgetDtos } from './budgets';
 import { highlightsFor } from './insights';
 import type { Lookups } from './lookups';
@@ -276,4 +276,76 @@ export function reportToCsvRows(report: ReportDto): unknown[][] {
     for (const r of section.rows) rows.push(section.columns.map((c) => plain(r[c.key] ?? null, c.format)));
   }
   return rows;
+}
+
+/** A statement is meant to be read and printed, so it stops at this many rows; the CSV and JSON exports have no limit. */
+export const STATEMENT_ROW_CAP = 10_000;
+
+const shorten = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text);
+
+/**
+ * Every transaction matching `match` as a printable statement: the totals first, then one row per transaction,
+ * newest first. `range` is the date range the person filtered by, or none for everything they have.
+ */
+export async function buildStatement(auth: AuthContext, lk: Lookups, match: Record<string, unknown>, range: ResolvedRange | undefined, now: Date): Promise<ReportDto> {
+  const [rows, count, totals] = await Promise.all([
+    Transaction.find(match).sort({ date: -1, _id: -1 }).limit(STATEMENT_ROW_CAP).lean(),
+    Transaction.countDocuments(match),
+    totalsForMatch(match),
+  ]);
+  const zone = auth.tz;
+  const newest = rows[0]?.date ?? now;
+  const oldest = rows[rows.length - 1]?.date ?? now;
+  const dateOf = (d: Date) => DateTime.fromJSDate(d, { zone }).toISODate() ?? '';
+  const span = range
+    ? rangeDto(range)
+    : { preset: 'custom' as const, from: oldest.toISOString(), to: newest.toISOString(), fromDate: dateOf(oldest), toDate: dateOf(newest), days: Math.max(1, Math.round((newest.getTime() - oldest.getTime()) / 86_400_000) + 1), elapsedDays: 0, inProgress: false, label: 'All transactions', timezone: zone };
+
+  const truncated = count > rows.length;
+  return {
+    type: 'transaction-statement',
+    title: 'Transaction statement',
+    subtitle: range ? range.label : 'Every transaction in your records',
+    range: span,
+    generatedAt: now.toISOString(),
+    timezone: zone,
+    isDemo: auth.user.isDemo,
+    summary: [
+      { label: 'Transactions', value: new Intl.NumberFormat('en-IN').format(count) },
+      { label: 'Net spending', value: formatINR(totals.netPaise, { decimals: 'auto' }) },
+      { label: 'Purchases', value: formatINR(totals.grossPaise, { decimals: 'auto' }) },
+      { label: 'Refunds', value: formatINR(totals.refundsPaise, { decimals: 'auto' }) },
+      { label: 'Income', value: formatINR(totals.incomePaise, { decimals: 'auto' }) },
+      { label: 'Average purchase', value: formatINR(totals.expenseCount ? Math.round(totals.grossPaise / totals.expenseCount) : 0, { decimals: 'auto' }) },
+    ],
+    sections: [
+      {
+        title: 'All transactions',
+        note: [
+          truncated ? `Showing the newest ${new Intl.NumberFormat('en-IN').format(rows.length)} of ${new Intl.NumberFormat('en-IN').format(count)} transactions; the CSV and JSON exports hold every one.` : null,
+          'Refunds and income carry a +. Pending, failed and reversed transactions are marked and left out of the totals.',
+        ].filter(Boolean).join(' '),
+        columns: [
+          { key: 'date', label: 'Date', format: 'date', weight: 0.74 },
+          { key: 'merchant', label: 'Merchant', weight: 1.25 },
+          { key: 'what', label: 'What', weight: 2.3 },
+          { key: 'category', label: 'Category', weight: 1.2 },
+          { key: 'amount', label: 'Amount', align: 'right', format: 'text' },
+        ],
+        rows: rows.map((x) => {
+          const dishes = x.orderDetail?.items.length ? shorten(describeDetail({ ...x.orderDetail, place: null }), 110) : null;
+          const note = x.description && x.description.trim().toLowerCase() !== x.merchantName.toLowerCase() ? shorten(x.description, 90) : null;
+          const platform = lk.platformName(x.platform);
+          const category = lk.categoryName(x.category) ?? 'Uncategorized';
+          return {
+            date: dateOf(x.date),
+            merchant: x.orderDetail?.place ?? x.merchantName,
+            what: [dishes ?? note, x.status === 'completed' ? null : `(${x.status})`].filter(Boolean).join(' ') || null,
+            category: platform && platform !== x.merchantName ? `${category} · ${platform}` : category,
+            amount: formatINR(x.amountPaise, { decimals: 'auto', signed: x.type === 'income' || x.type === 'refund' }),
+          };
+        }),
+      },
+    ],
+  };
 }
