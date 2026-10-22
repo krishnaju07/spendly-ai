@@ -110,7 +110,10 @@ export default function Reports() {
                       {r.summary.map((s) => (
                         <div key={s.label} className="rounded-2xl bg-muted/60 px-4 py-3">
                           <dt className="text-[11px] font-semibold tracking-[0.1em] text-muted-foreground uppercase">{s.label}</dt>
-                          <dd className="mt-1 text-lg leading-tight font-semibold tracking-tight tnum">{s.value}</dd>
+                          <dd className="mt-1 text-lg leading-tight font-semibold tracking-tight tnum">
+                            {s.value}
+                            {s.delta && <span className={`ml-2 text-xs font-medium ${s.tone === 'good' ? 'text-ok' : s.tone === 'bad' ? 'text-warn' : 'text-muted-foreground'}`}>{s.delta}</span>}
+                          </dd>
                         </div>
                       ))}
                     </dl>

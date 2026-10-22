@@ -119,6 +119,9 @@ export interface TransactionInsightsDto {
   topDish: { name: string; times: number } | null;
   /** Dishes by veg mark; null when no order says. */
   diet: { veg: number; nonveg: number; egg: number } | null;
+  /** The five places ordered from most, and the five dishes ordered most. */
+  places: Array<{ name: string; orders: number; paise: number }>;
+  dishes: Array<{ name: string; times: number }>;
   /** Spend per local day, oldest first. */
   daily: Array<{ day: string; paise: number }>;
 }
@@ -588,7 +591,21 @@ export interface ReportDto {
   generatedAt: string;
   timezone: string;
   isDemo: boolean;
-  summary: Array<{ label: string; value: string }>;
+  summary: Array<{
+    label: string;
+    value: string;
+    /** A change against the comparison period, written out ("+15%"); `tone` says whether it is good news. */
+    delta?: string;
+    tone?: 'good' | 'bad' | 'flat';
+  }>;
+  /** A bar chart for the top of the report: one bar per day (a month) or per month (a year). Money in paise. */
+  chart?: { title: string; bars: Array<{ label: string; /** The bar written out in full ('21 Oct'), for calling out the highest. */ full?: string; paise: number }> };
+  /** What was ordered, from linked accounts: only when there are orders to describe. */
+  food?: {
+    places: Array<{ name: string; orders: number; paise: number }>;
+    dishes: Array<{ name: string; times: number }>;
+    diet: { veg: number; nonveg: number; egg: number } | null;
+  };
   sections: Array<{
     title: string;
     note?: string;

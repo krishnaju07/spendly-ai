@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
 import {
+  describeDetail,
   formatINR,
   lastMonths,
   percentChange,
@@ -9,7 +10,7 @@ import {
 } from '@spendly/shared';
 import type { AuthContext } from '../middleware/context';
 import { Transaction } from '../models/finance';
-import { categoryStats, periodTotals, platformStats, trendSeries } from './analytics';
+import { categoryStats, periodTotals, platformStats, transactionInsights, trendSeries } from './analytics';
 import { listBudgetDtos } from './budgets';
 import { highlightsFor } from './insights';
 import type { Lookups } from './lookups';
@@ -33,6 +34,23 @@ export const DEFAULT_RANGE: Record<ReportType, 'this_month' | 'this_year' | 'las
 type Section = ReportDto['sections'][number];
 const money = (p: number) => formatINR(p, { decimals: 'auto' });
 const pct = (v: number | null) => (v === null ? 'new' : Math.round(v) === 0 ? 'unchanged' : `${v >= 0 ? '+' : '−'}${Math.abs(Math.round(v))}%`);
+
+/** The change against the comparison period as words, and whether it is good news (spending less) or not. */
+function deltaOf(change: number | null): { delta?: string; tone?: 'good' | 'bad' | 'flat' } {
+  if (change === null) return { delta: 'new', tone: 'flat' };
+  const rounded = Math.round(change);
+  return { delta: pct(change), tone: rounded === 0 ? 'flat' : rounded > 0 ? 'bad' : 'good' };
+}
+
+/** One bar per local day from the start of the range to today (or its end), days with no spending as zero. */
+function dayBars(daily: Array<{ day: string; paise: number }>, range: ResolvedRange, tz: string, now: Date): Array<{ label: string; full: string; paise: number }> {
+  const byDay = new Map(daily.map((d) => [d.day, d.paise]));
+  const start = DateTime.fromJSDate(range.from, { zone: tz }).startOf('day');
+  const end = DateTime.min(DateTime.fromJSDate(range.to, { zone: tz }).minus({ days: 1 }).startOf('day'), DateTime.fromJSDate(now, { zone: tz }).startOf('day'));
+  const bars: Array<{ label: string; full: string; paise: number }> = [];
+  for (let d = start; d <= end && bars.length < 400; d = d.plus({ days: 1 })) bars.push({ label: String(d.day), full: d.toFormat('d LLL'), paise: byDay.get(d.toISODate() ?? '') ?? 0 });
+  return bars;
+}
 
 const categoryTable = (rows: Awaited<ReturnType<typeof categoryStats>>): Section => ({
   title: 'Spending by category',
@@ -71,7 +89,7 @@ export async function buildReport(auth: AuthContext, lk: Lookups, type: ReportTy
     { label: 'Purchases', value: money(t.grossPaise) },
     { label: 'Refunds', value: money(t.refundsPaise) },
     ...(auth.prefs.incomeTracking ? [{ label: 'Income', value: money(t.incomePaise) }] : []),
-    { label: baseline.baselineLabel, value: `${money(p.netPaise)} (${pct(percentChange(t.netPaise, p.netPaise))})` },
+    { label: baseline.baselineLabel, value: money(p.netPaise), ...deltaOf(percentChange(t.netPaise, p.netPaise)) },
     { label: 'Transactions', value: String(t.expenseCount) },
   ];
   const head = { range: rangeDto(range), generatedAt: now.toISOString(), timezone: auth.tz, isDemo: auth.user.isDemo };
@@ -79,12 +97,15 @@ export async function buildReport(auth: AuthContext, lk: Lookups, type: ReportTy
   switch (type) {
     case 'monthly-spending': {
       const top = await Transaction.find({ userId: auth.userId, type: 'expense', status: 'completed', date: { $gte: range.from, $lt: range.to } }).sort({ amountPaise: -1 }).limit(10).lean();
+      const insights = await transactionInsights({ userId: auth.userId, date: { $gte: range.from, $lt: range.to } }, auth.tz);
       return {
         type,
         title: 'Monthly spending report',
         subtitle: range.label,
         ...head,
         summary,
+        chart: { title: 'Spend by day', bars: dayBars(insights.daily, range, auth.tz, now) },
+        food: insights.places.length ? { places: insights.places, dishes: insights.dishes, diet: insights.diet } : undefined,
         sections: [
           categoryTable(cats),
           platformTable(plats),
@@ -93,10 +114,11 @@ export async function buildReport(auth: AuthContext, lk: Lookups, type: ReportTy
             columns: [
               { key: 'date', label: 'Date', format: 'date' },
               { key: 'merchant', label: 'Merchant' },
+              { key: 'what', label: 'What' },
               { key: 'category', label: 'Category' },
               { key: 'amount', label: 'Amount', align: 'right', format: 'money' },
             ],
-            rows: top.map((x) => ({ date: DateTime.fromJSDate(x.date, { zone: auth.tz }).toISODate(), merchant: x.merchantName, category: lk.categoryName(x.category) ?? 'Uncategorized', amount: x.amountPaise })),
+            rows: top.map((x) => ({ date: DateTime.fromJSDate(x.date, { zone: auth.tz }).toISODate(), merchant: x.orderDetail?.place ?? x.merchantName, what: x.orderDetail?.items.length ? describeDetail({ ...x.orderDetail, place: null }) : null, category: lk.categoryName(x.category) ?? 'Uncategorized', amount: x.amountPaise })),
           },
         ],
       };
@@ -110,6 +132,7 @@ export async function buildReport(auth: AuthContext, lk: Lookups, type: ReportTy
         subtitle: range.label,
         ...head,
         summary,
+        chart: { title: 'Spend by month', bars: series.map((m) => ({ label: m.label, full: m.label, paise: m.netPaise })) },
         sections: [
           {
             title: 'Month by month',
@@ -243,7 +266,7 @@ export function reportToCsvRows(report: ReportDto): unknown[][] {
     return v;
   };
   const rows: unknown[][] = [[report.title], [report.subtitle], [`Period ${report.range.fromDate} to ${report.range.toDate}`, `Timezone ${report.timezone}`, report.isDemo ? 'DEMO DATA' : ''], []];
-  for (const s of report.summary) rows.push([s.label, s.value]);
+  for (const s of report.summary) rows.push([s.label, s.value, s.delta ?? '']);
   for (const section of report.sections) {
     rows.push([], [section.title]);
     if (section.note) rows.push([section.note]);

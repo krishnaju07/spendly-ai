@@ -1,49 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, CircleHelp, Copy, Download, Plus, Repeat, Search, Tag, Trash2, X, Link2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleHelp, Copy, Download, Plus, Repeat, Search, Tag, Trash2, X, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DuplicateGroupDto, PageMeta, PeriodTotals, TransactionDto } from '@spendly/shared';
-import { CategoryIcon, seriesVar } from '@/components/common/category-icon';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { FilterBar } from '@/components/common/filter-bar';
-import { Money } from '@/components/common/money';
-import { PlatformLogo } from '@/components/common/platform-logo';
 import { EmptyState, ErrorState, PageHeader } from '@/components/common/states';
 import { useTransactionPanel } from '@/components/transactions/transaction-panel';
-import { TxnAmount, TxnRow } from '@/components/transactions/txn-row';
-import { Badge } from '@/components/ui/badge';
+import { TxnAmount } from '@/components/transactions/txn-row';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useSession } from '@/hooks/use-auth';
 import { useCatalog } from '@/hooks/use-catalog';
-import { useIsDesktop, useMediaQuery } from '@/hooks/use-media-query';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { api } from '@/lib/api';
 import { useFilters } from '@/lib/filters';
-import { dayHeading, dayKey, formatDate, formatTime, plural } from '@/lib/format';
-import { paidWithOf } from '@/lib/labels';
-import { DishChips, detailOfTxn } from '@/components/transactions/order-detail';
+import { dayKey, dayTitle, formatDate, formatTime, inr, plural } from '@/lib/format';
+import { InsightBand, useInsights } from '@/components/transactions/insight-band';
+import { LedgerRow } from '@/components/transactions/ledger-row';
 import { cn } from '@/lib/utils';
 
 type Result = { items: TransactionDto[]; meta: PageMeta; totals: PeriodTotals };
 type SortKey = 'date' | 'amount' | 'merchant';
-
-function SortHead({ label, k, sort, order, onSort, className }: { label: string; k: SortKey; sort: SortKey; order: 'asc' | 'desc'; onSort: (k: SortKey) => void; className?: string }) {
-  const active = sort === k;
-  const Icon = !active ? ArrowUpDown : order === 'asc' ? ArrowUp : ArrowDown;
-  return (
-    <TableHead aria-sort={active ? (order === 'asc' ? 'ascending' : 'descending') : 'none'} className={className}>
-      <button type="button" onClick={() => onSort(k)} className={cn('inline-flex items-center gap-1 text-xs font-semibold tracking-wide uppercase outline-none focus-visible:ring-2 focus-visible:ring-ring', active ? 'text-foreground' : 'text-muted-foreground')}>
-        {label}
-        <Icon className="size-3" aria-hidden />
-      </button>
-    </TableHead>
-  );
-}
 
 function DuplicatesDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const qc = useQueryClient();
@@ -150,7 +132,6 @@ function BulkBar({ ids, onClear, onDone }: { ids: string[]; onClear: () => void;
 export default function Transactions() {
   const { prefs } = useSession();
   const tz = prefs.timezone;
-  const cat = useCatalog();
   const { openView, openNew } = useTransactionPanel();
   const { range, rangeParams, apiParams, filters, params, setParams } = useFilters();
   const qc = useQueryClient();
@@ -158,7 +139,6 @@ export default function Transactions() {
   const [dupes, setDupes] = useState(false);
   const [search, setSearch] = useState(params.get('q') ?? '');
   const roomy = useMediaQuery('(min-width: 640px)');
-  const isDesktop = useIsDesktop();
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const page = Number(params.get('page') ?? 1) || 1;
@@ -180,6 +160,8 @@ export default function Transactions() {
   const importJob = params.get('importJob') || undefined;
   const scope = importJob ? { category: filters.category, platform: filters.platform, paymentMethod: filters.paymentMethod, type: filters.type, importJob } : apiParams;
   const query = { ...scope, q: q || undefined, page, pageSize, sort, order, ...flags };
+  // what the insights are about: the same filters as the list, whatever page or order it is on
+  const insightQuery = { ...scope, q: q || undefined, ...flags };
   const data = useQuery({ queryKey: ['transactions', 'list', query], queryFn: () => api.get<Result>('/transactions', query), placeholderData: keepPreviousData });
 
   const set = (patch: Record<string, string | null>) => setParams((p) => { const n = new URLSearchParams(p); for (const [k, v] of Object.entries(patch)) { if (v === null) n.delete(k); else n.set(k, v); } if (!('page' in patch)) n.delete('page'); return n; }, { replace: true });
@@ -188,10 +170,7 @@ export default function Transactions() {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => set({ q: v.trim() || null }), 300);
   };
-  const onSort = (k: SortKey) => set({ sort: k, order: sort === k ? (order === 'asc' ? 'desc' : 'asc') : k === 'merchant' ? 'asc' : 'desc' });
   const items = useMemo(() => data.data?.items ?? [], [data.data]);
-  // a column of dashes says nothing: "Paid with" only appears when some row on screen says how it was paid
-  const showPaid = items.some((t) => paidWithOf(t));
   const meta = data.data?.meta;
   const totals = data.data?.totals;
   const allSelected = items.length > 0 && items.every((t) => selected.has(t.id));
@@ -199,16 +178,22 @@ export default function Transactions() {
   const clearSel = () => setSelected(new Set());
   const refresh = () => { clearSel(); void qc.invalidateQueries({ predicate: (x) => x.queryKey[0] !== 'me' && x.queryKey[0] !== 'catalog' }); };
 
-  const grouped = useMemo(() => {
-    const out: Array<{ day: string; heading: string; items: TransactionDto[] }> = [];
+  // a day's total comes from the whole range (the page may cut a day in two); without it, from what is on screen
+  const insights = useInsights(insightQuery).data;
+  const dayTotals = useMemo(() => new Map((insights?.daily ?? []).map((d) => [d.day, d.paise])), [insights]);
+  const groups = useMemo(() => {
+    // only a list in date order reads as days; sorted by amount or merchant it is one flat list with the date on each row
+    if (sort !== 'date') return [{ day: 'all', title: null as string | null, date: '', paise: 0, items }];
+    const out: Array<{ day: string; title: string | null; date: string; paise: number; items: TransactionDto[] }> = [];
     for (const t of items) {
       const k = dayKey(t.date, tz);
       const last = out[out.length - 1];
       if (last?.day === k) last.items.push(t);
-      else out.push({ day: k, heading: dayHeading(t.date, tz), items: [t] });
+      else out.push({ day: k, ...dayTitle(t.date, tz), paise: 0, items: [t] });
     }
+    for (const g of out) g.paise = dayTotals.get(g.day) ?? g.items.reduce((n, t) => n + (t.status === 'completed' && t.type === 'expense' ? t.amountPaise : 0), 0);
     return out;
-  }, [items, tz]);
+  }, [items, tz, sort, dayTotals]);
 
   const exportCsv = () => api.download('/transactions/export', { ...rangeParams, ...Object.fromEntries(Object.entries(apiParams).filter(([k]) => ['category', 'platform', 'paymentMethod', 'type'].includes(k))) } as never, 'spendly-transactions.csv').catch((e) => toast.error(e instanceof Error ? e.message : 'Export failed'));
   const toggleFlag = (key: 'needsReview' | 'duplicates' | 'recurring' | 'linked') => set({ [key]: flags[key] ? null : 'true' });
@@ -226,15 +211,7 @@ export default function Transactions() {
         }
       />
 
-      {totals && (
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-[28px] border bg-card px-5 py-4 shadow-card" aria-live="polite">
-          <div><p className="text-[10.5px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">Net spending</p><Money paise={totals.netPaise} size="lg" className="mt-1" /></div>
-          <div><p className="text-[10.5px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">Purchases</p><Money paise={totals.grossPaise} size="md" className="mt-1.5" /></div>
-          {totals.refundsPaise > 0 && <div><p className="text-[10.5px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">Refunds</p><Money paise={totals.refundsPaise} size="md" className="mt-1.5 text-ok" /></div>}
-          {prefs.incomeTracking && totals.incomePaise > 0 && <div><p className="text-[10.5px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">Income</p><Money paise={totals.incomePaise} size="md" className="mt-1.5 text-ok" /></div>}
-          <p className="ml-auto text-xs text-muted-foreground">Totals count completed transactions; transfers are excluded.</p>
-        </div>
-      )}
+      <InsightBand totals={totals} query={insightQuery} />
 
       <div className="space-y-3">
         <div className="flex items-center gap-2">
@@ -243,7 +220,7 @@ export default function Transactions() {
             <Input value={search} onChange={(e) => onSearch(e.target.value)} placeholder={roomy ? 'Search merchant, platform, amount or date' : 'Search transactions'} aria-label="Search transactions" className="h-11 rounded-full bg-card pl-11" />
           </div>
           <Select value={`${sort}:${order}`} onValueChange={(v) => { const [s, o] = v.split(':'); set({ sort: s!, order: o! }); }}>
-            <SelectTrigger className="h-11 w-auto rounded-full bg-card md:hidden" aria-label="Sort by"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-11 w-auto rounded-full bg-card" aria-label="Sort by"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="date:desc">Newest first</SelectItem><SelectItem value="date:asc">Oldest first</SelectItem>
               <SelectItem value="amount:desc">Largest first</SelectItem><SelectItem value="amount:asc">Smallest first</SelectItem>
@@ -274,69 +251,29 @@ export default function Transactions() {
         <EmptyState className="rounded-[32px] border bg-card" title="No transactions here" description={q || range.preset ? 'Nothing matches these filters. Try a wider date range or clear a filter.' : 'Add a transaction or import a statement to get started.'} action={{ label: 'Add a transaction', onClick: () => openNew() }} secondary={{ label: 'Import a statement', to: '/import' }} />
       ) : (
         <>
-          {/* only the layout in use is built: a CSS-hidden 100-row table is still 100 rows of DOM (and logos) on a phone */}
-          {isDesktop ? (
-            <div className={cn('@container overflow-hidden rounded-[32px] border bg-card shadow-card', data.isFetching && 'opacity-70 transition-opacity')}>
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-10 pl-5"><label className="-m-2 grid w-max cursor-pointer place-items-center p-2"><input type="checkbox" aria-label="Select all on this page" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(items.map((t) => t.id)) : new Set())} className="size-4 accent-[var(--series-1)]" /></label></TableHead>
-                    <SortHead label="Merchant" k="merchant" sort={sort} order={order} onSort={onSort} />
-                    <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase @3xl:table-cell">Category</TableHead>
-                    {showPaid && <TableHead className="hidden text-xs font-semibold tracking-wide text-muted-foreground uppercase @3xl:table-cell">Paid with</TableHead>}
-                    <SortHead label="Date" k="date" sort={sort} order={order} onSort={onSort} />
-                    <SortHead label="Amount" k="amount" sort={sort} order={order} onSort={onSort} className="pr-5 text-right [&>button]:ml-auto" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((t) => {
-                    const platform = cat.platform(t.platform);
-                    const category = cat.category(t.category);
-                    return (
-                      <TableRow key={t.id} data-state={selected.has(t.id) ? 'selected' : undefined} className="cursor-pointer" onClick={() => openView(t.id)}>
-                        <TableCell className="pl-5" onClick={(e) => e.stopPropagation()}><label className="-m-2 grid w-max cursor-pointer place-items-center p-2"><input type="checkbox" aria-label={`Select ${t.merchantName}`} checked={selected.has(t.id)} onChange={(e) => toggle(t.id, e.target.checked)} className="size-4 accent-[var(--series-1)]" /></label></TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            {platform ? <PlatformLogo platform={platform} size={38} /> : <CategoryIcon icon={category?.icon} color={seriesVar(category?.slot)} size={38} />}
-                            <div className="min-w-0">
-                              <button type="button" onClick={(e) => { e.stopPropagation(); openView(t.id); }} className="flex items-center gap-1.5 text-left text-sm font-medium outline-none hover:underline focus-visible:underline">
-                                <span className="max-w-[20rem] truncate">{detailOfTxn(t)?.place ?? t.merchantName}</span>
-                                {t.classification.needsReview && <><CircleHelp className="size-3.5 text-[var(--status-warning)]" aria-hidden /><span className="sr-only">Needs review</span></>}
-                                {t.duplicateStatus === 'possible' && <><Copy className="size-3.5 text-[var(--status-serious)]" aria-hidden /><span className="sr-only">Possible duplicate</span></>}
-                                {t.recurringPaymentId && <><Repeat className="size-3.5 opacity-50" aria-hidden /><span className="sr-only">Recurring</span></>}
-                              </button>
-                              {detailOfTxn(t)?.items.length ? <DishChips items={detailOfTxn(t)?.items ?? []} max={2} className="mt-1 max-w-[26rem]" /> : t.platformName && t.platformName !== t.merchantName ? <p className="truncate text-xs text-muted-foreground">{t.platformName}</p> : null}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden text-sm @3xl:table-cell">
-                          {t.categoryName ?? <span className="text-muted-foreground">Uncategorized</span>}
-                          {t.importSource === 'integration' && t.platformName && <span className="block text-xs text-muted-foreground">via {t.platformName}</span>}
-                        </TableCell>
-                        {showPaid && <TableCell className="hidden text-sm text-muted-foreground @3xl:table-cell">{paidWithOf(t) ?? '—'}</TableCell>}
-                        <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
-                          {formatDate(t.date, tz, 'long')}
-                          {t.hasTime && <span className="block text-xs">{formatTime(t.date, tz)}</span>}
-                          {t.status !== 'completed' && <Badge variant="warn" className="ml-2">{t.status}</Badge>}
-                          {t.type === 'transfer' && <Badge className="ml-2">Transfer</Badge>}
-                        </TableCell>
-                        <TableCell className="pr-5 text-right"><TxnAmount t={t} /></TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+          <div className={cn('rounded-[32px] border bg-card p-2 shadow-card sm:p-3', data.isFetching && 'opacity-70 transition-opacity')}>
+            <div className="flex items-center gap-3 px-3 py-2 text-xs text-muted-foreground">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input type="checkbox" aria-label="Select all on this page" checked={allSelected} onChange={(e) => setSelected(e.target.checked ? new Set(items.map((t) => t.id)) : new Set())} className="size-4 accent-[var(--series-1)]" />
+                Select all on this page
+              </label>
+              <span className="tnum ml-auto">{items.length} shown</span>
             </div>
-          ) : (
-            <div className={cn('space-y-5 rounded-[32px] border bg-card p-3 shadow-card', data.isFetching && 'opacity-70')}>
-              {grouped.map((g) => (
-                <div key={g.day}>
-                  <h3 className="mb-1 px-2 text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">{g.heading}</h3>
-                  {g.items.map((t) => <TxnRow key={t.id} t={t} tz={tz} onOpen={openView} selected={selected.has(t.id)} onSelect={(c) => toggle(t.id, c)} />)}
-                </div>
-              ))}
-            </div>
-          )}
+            {groups.map((g) => (
+              <section key={g.day} aria-label={g.title ?? 'Transactions'}>
+                {g.title && (
+                  <header className="flex items-baseline justify-between gap-3 px-3 pt-4 pb-1.5">
+                    <h3 className="flex items-baseline gap-2">
+                      <span className="text-[15px] font-semibold">{g.title}</span>
+                      <span className="text-xs text-muted-foreground">{g.date}</span>
+                    </h3>
+                    <span className="tnum text-xs text-muted-foreground">{inr(g.paise)} spent</span>
+                  </header>
+                )}
+                {g.items.map((t) => <LedgerRow key={t.id} t={t} tz={tz} selected={selected.has(t.id)} onSelect={(c) => toggle(t.id, c)} onOpen={openView} showDate={!g.title} />)}
+              </section>
+            ))}
+          </div>
 
           {meta && (
             <nav aria-label="Pagination" className="flex flex-wrap items-center justify-between gap-3">

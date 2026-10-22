@@ -33,6 +33,17 @@ export function dayHeading(iso: string, tz: string, now = DateTime.now()): strin
   return d.year === today.year ? d.toFormat('d LLLL') : d.toFormat('d LLLL yyyy');
 }
 
+/** A day heading as two parts: "Today" / "Yesterday" / "Wednesday", and the date beside it. */
+export function dayTitle(iso: string, tz: string, now = DateTime.now()): { title: string; date: string } {
+  const d = DateTime.fromISO(iso, { zone: tz }).startOf('day');
+  const today = now.setZone(tz).startOf('day');
+  const diff = Math.round(today.diff(d, 'days').days);
+  const date = d.year === today.year ? d.toFormat('d LLL') : d.toFormat('d LLL yyyy');
+  if (diff === 0) return { title: 'Today', date };
+  if (diff === 1) return { title: 'Yesterday', date };
+  return { title: d.toFormat('cccc'), date };
+}
+
 export const dayKey = (iso: string, tz: string) => DateTime.fromISO(iso, { zone: tz }).toISODate() ?? iso;
 
 export function relativeDays(days: number | null): string {
